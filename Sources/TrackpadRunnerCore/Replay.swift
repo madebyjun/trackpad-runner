@@ -19,6 +19,8 @@ public struct Recording: Codable {
 
     public struct Expectation: Codable, Equatable {
         public var actions: [Action]
+        /// 認識したジェスチャー（= ハプティックを鳴らすタイミング）。省略時は検証しない
+        public var triggers: [Trigger]?
         /// mouse イベントごとの判定（省略時は検証しない）
         public var mouse: [MouseDecision]?
     }
@@ -49,7 +51,9 @@ public enum Replay {
         let engine = Engine()
         var actions: [Action] = []
         var decisions: [MouseDecision] = []
+        var triggers: [Trigger] = []
         engine.onAction = { actions.append($0) }
+        engine.onTrigger = { triggers.append($0) }
 
         for event in recording.events {
             if let touches = event.touches {
@@ -65,10 +69,12 @@ public enum Replay {
             }
         }
 
-        let actual = Recording.Expectation(actions: actions, mouse: decisions)
+        let actual = Recording.Expectation(actions: actions, triggers: triggers, mouse: decisions)
         var passed = true
         if let expect = recording.expect {
-            passed = expect.actions == actions && (expect.mouse.map { $0 == decisions } ?? true)
+            passed = expect.actions == actions
+                && (expect.triggers.map { $0 == triggers } ?? true)
+                && (expect.mouse.map { $0 == decisions } ?? true)
         }
         return ReplayResult(
             file: file, name: recording.name, failureModes: recording.failureModes ?? [],
@@ -92,7 +98,13 @@ public enum Replay {
     private static func describe(_ e: Recording.Expectation?) -> String {
         guard let e else { return "—" }
         let actions = e.actions.isEmpty ? "なし" : e.actions.map(\.rawValue).joined(separator: ", ")
-        let mouse = e.mouse.map { $0.map(\.rawValue).joined(separator: " → ") } ?? ""
-        return mouse.isEmpty ? "actions: \(actions)" : "actions: \(actions) / mouse: \(mouse)"
+        var parts = ["actions: \(actions)"]
+        if let triggers = e.triggers {
+            parts.append("haptic: " + (triggers.isEmpty ? "なし" : triggers.map(\.rawValue).joined(separator: ", ")))
+        }
+        if let mouse = e.mouse, !mouse.isEmpty {
+            parts.append("mouse: " + mouse.map(\.rawValue).joined(separator: " → "))
+        }
+        return parts.joined(separator: " / ")
     }
 }

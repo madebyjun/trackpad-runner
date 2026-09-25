@@ -34,4 +34,9 @@ int cmt_start(MTContactCallback callback);
 // デバイス数を返す（開始はしない）。フレームワークが読み込めない場合は -1。
 int cmt_device_count(void);
 
+// 全トラックパッドのアクチュエータで振動させる（MTActuatorActuate）。
+// actuationID は BTT の「Haptic Feedback」設定値と同じ（3 = 弱, 4 = 中, 6 = 強 など）。
+// 戻り値: 振動させたデバイス数。フレームワークが読み込めない場合は -1。
+int cmt_actuate(int actuationID);
+
 #endif

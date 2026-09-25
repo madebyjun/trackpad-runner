@@ -1660,6 +1660,7 @@
   }
  ],
  "expect": {
-  "actions": []
+  "actions": [],
+  "triggers": []
  }
 }

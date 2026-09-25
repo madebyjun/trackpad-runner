@@ -1819,6 +1819,9 @@
  ],
  "expect": {
   "actions": [],
+  "triggers": [
+   "threeFingerClick"
+  ],
   "mouse": [
    "convertToMiddle",
    "convertToMiddle"

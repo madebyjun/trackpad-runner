@@ -2193,6 +2193,10 @@
   "actions": [
    "middleClick",
    "middleClick"
+  ],
+  "triggers": [
+   "tipTapLeft",
+   "tipTapLeft"
   ]
  }
 }

@@ -1792,6 +1792,9 @@
  "expect": {
   "actions": [
    "middleClick"
+  ],
+  "triggers": [
+   "tipTapLeft"
   ]
  }
 }

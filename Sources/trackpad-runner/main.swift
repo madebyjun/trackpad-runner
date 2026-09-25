@@ -8,6 +8,8 @@ let usage = """
   trackpad-runner                         メニューバーに常駐して動作する
   trackpad-runner --headless              メニューバー無しで動作する（ターミナルから）
   trackpad-runner --list-devices          トラックパッドの数を表示する
+  trackpad-runner --haptic ID             トラックパッドを振動させる（ID を試す用。指を置いたまま実行）
+  trackpad-runner --send-shortcut         ⇧⌘5 を送る（アクセシビリティ権限が必要）
   trackpad-runner --record FILE [--seconds N]
                                           実機の入力を N 秒（既定 10）記録して JSON に保存する
   trackpad-runner --replay FILE... [--report-dir DIR]
@@ -77,6 +79,15 @@ case "--list-devices":
     let count = cmt_device_count()
     if count < 0 { fail(LiveError.multitouchUnavailable.description) }
     print(count)
+
+case "--haptic":
+    guard let value = option("--haptic", in: args), let id = Int32(value) else { fail(usage) }
+    let count = cmt_actuate(id)
+    if count < 0 { fail(LiveError.multitouchUnavailable.description) }
+    print("振動させたデバイス数: \(count)")
+
+case "--send-shortcut":
+    Output.screenshotShortcut()
 
 case "--record":
     guard let file = option("--record", in: args) else { fail(usage) }

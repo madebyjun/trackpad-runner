@@ -1790,6 +1790,7 @@
   }
  ],
  "expect": {
-  "actions": []
+  "actions": [],
+  "triggers": []
  }
 }

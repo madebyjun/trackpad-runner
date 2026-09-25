@@ -1789,6 +1789,7 @@
  ],
  "expect": {
   "actions": [],
+  "triggers": [],
   "mouse": [
    "passThrough",
    "passThrough"

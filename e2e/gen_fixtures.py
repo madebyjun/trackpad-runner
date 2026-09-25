@@ -33,8 +33,8 @@ def build(fingers, mouse, end=None):
     return events
 
 cases = []
-def case(file, name, fms, fingers, mouse, actions, decisions=None, events=None):
-    exp = dict(actions=actions)
+def case(file, name, fms, fingers, mouse, actions, decisions=None, events=None, triggers=()):
+    exp = dict(actions=actions, triggers=list(triggers))
     if decisions is not None: exp["mouse"] = decisions
     cases.append((file, dict(name=name, failureModes=fms, events=events or build(fingers, mouse), expect=exp)))
 
@@ -45,28 +45,28 @@ anchors = lambda on=0.0, off=1.0, dx=0.0, dy=0.0: [finger(1, 0.55, 0.4, on, off,
 # クリック系
 case("click-1finger", "1本指クリックは素通り", [1], [finger(1, .5, .5, 0, .5)], click(.2, .3), [], [P, P])
 case("click-2finger", "2本指クリックは素通り", [1], [finger(1, .45, .5, 0, .5), finger(2, .55, .5, 0, .5)], click(.2, .3), [], [P, P])
-case("click-3finger", "3本指クリック → 中クリック", [2], [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)], click(.2, .3), [], [C, C])
-case("click-4finger", "4本指クリック → ⇧⌘5（左クリックは握りつぶす）", [3], [finger(i, .2 + .1 * i, .5, 0, .5) for i in range(1, 5)], click(.2, .3), ["screenshotShortcut"], [S, S])
+case("click-3finger", "3本指クリック → 中クリック", [2], [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("click-4finger", "4本指クリック → ⇧⌘5（左クリックは握りつぶす）", [3], [finger(i, .2 + .1 * i, .5, 0, .5) for i in range(1, 5)], click(.2, .3), ["screenshotShortcut"], [S, S], triggers=["fourFingerClick"])
 case("click-3finger-lift-before-up", "3本で押し、2本で離しても up は中クリックのまま", [4],
-     [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, 0, .25)], click(.2, .3), [], [C, C])
+     [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, 0, .25)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
 case("click-2finger-add-before-up", "2本で押し、4本になってから離しても素通りのまま", [4],
      [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, .25, .5), finger(4, .7, .5, .25, .5)], click(.2, .35), [], [P, P])
 case("click-3finger-drag", "3本指で押したままドラッグ → dragged も中ボタンに", [5],
-     [finger(i, .3 + .1 * i, .5, 0, .6, dx=.1) for i in range(1, 4)], [(.2, "down"), (.25, "dragged"), (.3, "dragged"), (.4, "up")], [], [C, C, C, C])
+     [finger(i, .3 + .1 * i, .5, 0, .6, dx=.1) for i in range(1, 4)], [(.2, "down"), (.25, "dragged"), (.3, "dragged"), (.4, "up")], [], [C, C, C, C], triggers=["threeFingerClick"])
 case("click-5finger", "5本指クリックは素通り", [6], [finger(i, .1 + .1 * i, .5, 0, .5) for i in range(1, 6)], click(.2, .3), [], [P, P])
 case("click-3finger-one-hovering", "触れていない指（ホバー）は数えない", [7],
      [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, 0, .5, state=3)], click(.2, .3), [], [P, P])
 case("click-multi-device", "別デバイスの指は合算しない（3本 + 1本 → 3本として中クリック）", [24],
-     [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)] + [finger(9, .5, .5, 0, .5, device=1)], click(.2, .3), [], [C, C])
+     [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)] + [finger(9, .5, .5, 0, .5, device=1)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
 
 # TipTap左
-case("tiptap-left", "TipTap左 → 中クリック", [10], anchors() + [finger(3, .3, .4, .3, .4)], [], ["middleClick"])
+case("tiptap-left", "TipTap左 → 中クリック", [10], anchors() + [finger(3, .3, .4, .3, .4)], [], ["middleClick"], triggers=["tipTapLeft"])
 case("tiptap-right", "右側のタップは発火しない", [11], anchors() + [finger(3, .85, .4, .3, .4)], [], [])
 case("tiptap-long-press", "長押し（0.6秒）は発火しない", [12], anchors() + [finger(3, .3, .4, .2, .8)], [], [])
 case("tiptap-moving-tap", "タップした指が動いた（スワイプ）場合は発火しない", [13], anchors() + [finger(3, .3, .4, .3, .45, dy=.15)], [], [])
 case("tiptap-anchors-scrolling", "2本指スクロール中は発火しない", [14], anchors(dy=.4) + [finger(3, .3, .4, .4, .5)], [], [])
 case("tiptap-with-physical-click", "タップ中に物理クリック → 3本指クリックだけが効き、TipTap は発火しない", [15, 2],
-     anchors() + [finger(3, .3, .4, .3, .45)], click(.35, .4), [], [C, C])
+     anchors() + [finger(3, .3, .4, .3, .45)], click(.35, .4), [], [C, C], triggers=["threeFingerClick"])
 case("tiptap-one-anchor", "固定が1本のときは発火しない", [16], [finger(1, .6, .4, 0, 1), finger(3, .3, .4, .3, .4)], [], [])
 case("tiptap-three-anchors", "固定が3本のときは発火しない", [16],
      anchors() + [finger(4, .8, .4, 0, 1), finger(3, .3, .4, .3, .4)], [], [])
@@ -77,7 +77,7 @@ case("tiptap-simultaneous-three", "3本同時に置いて左だけ離しても�
 case("tiptap-anchors-too-young", "固定側を置いた直後（0.1秒未満）のタップは発火しない", [18],
      [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .25)], [], [])
 case("tiptap-twice", "2回タップすると2回だけ発火する", [19],
-     anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .7, .8)], [], ["middleClick", "middleClick"])
+     anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .7, .8)], [], ["middleClick", "middleClick"], triggers=["tipTapLeft", "tipTapLeft"])
 case("tiptap-other-device", "固定とタップが別デバイスなら発火しない", [24],
      anchors() + [finger(3, .3, .4, .3, .4, device=1)], [], [])
 

@@ -2,11 +2,17 @@
 
 BetterTouchTool で実際に使っていた機能だけを抜き出した、最小のトラックパッドジェスチャーアプリ。
 
-| トリガー | 動作 |
-|---|---|
-| 3本指でクリック | 中クリック |
-| 4本指でクリック | ⇧⌘5（スクリーンショット） |
-| TipTap左（2本指を置いたまま、その左側を1本指でタップ） | 中クリック |
+| トリガー | 動作 | ハプティック |
+|---|---|---|
+| 3本指でクリック | 中クリック | 4 |
+| 4本指でクリック | ⇧⌘5（スクリーンショット。CleanShot などに割り当てていればそちらが起動する） | 6 |
+| TipTap左（2本指を置いたまま、その左側を1本指でタップ） | 中クリック | 3 |
+
+ハプティックの値は BTT の設定値（`BTTGestureForceFeedbackPattern`）と同じで、トラックパッドの振動API（`MTActuatorActuate`）に渡す振動パターンのIDです。値は `Sources/trackpad-runner/Live.swift` の `hapticPatterns` で変えられます。どんな感触かは、トラックパッドに指を置いたまま次を実行すると試せます。
+
+```bash
+swift run trackpad-runner --haptic 6
+```
 
 アプリごとの設定の切り替えや、設定ファイルはありません。
 
@@ -39,6 +45,14 @@ swift run trackpad-runner --headless
 - TipTap左は、固定の2本が 0.1 秒以上置かれている状態で、その左に置いた指が 0.35 秒以内・ほぼ動かずに離れたときに発火する
 
 判定ロジックは `Sources/TrackpadRunnerCore` にあり、実機の入力もリプレイもこの同じ `Engine` を通ります。
+
+## ログ
+
+クリック時の指の本数・判定・発火したジェスチャーを unified log に出しています。
+
+```bash
+log stream --level info --predicate 'subsystem == "com.madebyjun.trackpad-runner"'
+```
 
 ## E2E
 

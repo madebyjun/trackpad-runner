@@ -32,6 +32,13 @@ public enum Action: String, Codable, Equatable {
     case screenshotShortcut // ⇧⌘5
 }
 
+/// 認識したジェスチャー。ハプティックはこの単位で鳴らす。
+public enum Trigger: String, Codable, Equatable, CaseIterable {
+    case threeFingerClick
+    case fourFingerClick
+    case tipTapLeft
+}
+
 /// 左ボタンイベントをどう扱うか。
 public enum MouseDecision: String, Codable, Equatable {
     case passThrough
@@ -44,6 +51,9 @@ public enum MouseDecision: String, Codable, Equatable {
 public final class Engine {
     public var isEnabled = true
     public var onAction: (Action) -> Void = { _ in }
+    public var onTrigger: (Trigger) -> Void = { _ in }
+    /// 直近の mouseDown 時点の指の本数（ログ用）
+    public private(set) var fingerCountAtLastClick = 0
 
     private enum Press { case middle, shortcut }
 
@@ -64,21 +74,25 @@ public final class Engine {
         let recognizer = tipTaps[device] ?? TipTapRecognizer(config: tipTapConfig)
         tipTaps[device] = recognizer
         if recognizer.feed(time: time, touching: touching), isEnabled {
+            onTrigger(.tipTapLeft)
             onAction(.middleClick)
         }
     }
 
     public func mouseDown() -> MouseDecision {
         for recognizer in tipTaps.values { recognizer.noteClick() }
+        // どのデバイスでクリックされたかは分からないので、最も指が多いデバイスで判定する
+        fingerCountAtLastClick = touchingCount.values.max() ?? 0
         guard isEnabled else { press = nil; return .passThrough }
 
-        // どのデバイスでクリックされたかは分からないので、最も指が多いデバイスで判定する
-        switch touchingCount.values.max() ?? 0 {
+        switch fingerCountAtLastClick {
         case 3:
             press = .middle
+            onTrigger(.threeFingerClick)
             return .convertToMiddle
         case 4:
             press = .shortcut
+            onTrigger(.fourFingerClick)
             onAction(.screenshotShortcut)
             return .swallow
         default:

@@ -1491,6 +1491,9 @@
   "actions": [
    "screenshotShortcut"
   ],
+  "triggers": [
+   "fourFingerClick"
+  ],
   "mouse": [
    "swallow",
    "swallow"

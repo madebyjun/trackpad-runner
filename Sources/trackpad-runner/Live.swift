@@ -1,7 +1,17 @@
 import ApplicationServices
 import CMultitouch
 import Foundation
+import OSLog
 import TrackpadRunnerCore
+
+let log = Logger(subsystem: "com.madebyjun.trackpad-runner", category: "live")
+
+/// ジェスチャーごとのハプティック。値は BTT で設定していた BTTGestureForceFeedbackPattern と同じ。
+let hapticPatterns: [Trigger: Int32] = [
+    .threeFingerClick: 4,
+    .fourFingerClick: 6,
+    .tipTapLeft: 3,
+]
 
 enum LiveError: Error, CustomStringConvertible {
     case accessibilityNotGranted
@@ -61,7 +71,13 @@ final class LiveRunner {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else { throw LiveError.accessibilityNotGranted }
 
+        engine.onTrigger = { trigger in
+            guard let pattern = hapticPatterns[trigger] else { return }
+            let count = cmt_actuate(pattern)
+            log.info("trigger=\(trigger.rawValue, privacy: .public) haptic=\(pattern) devices=\(count)")
+        }
         engine.onAction = { action in
+            log.info("action=\(action.rawValue, privacy: .public)")
             switch action {
             case .middleClick: Output.middleClick()
             case .screenshotShortcut: Output.screenshotShortcut()
@@ -87,6 +103,10 @@ final class LiveRunner {
                 case .leftMouseDragged: self.engine.mouseDragged()
                 default: self.engine.mouseUp()
                 }
+            }
+            if type == .leftMouseDown {
+                let fingers = self.lock.withLock { self.engine.fingerCountAtLastClick }
+                log.info("mouseDown fingers=\(fingers) decision=\(decision.rawValue, privacy: .public)")
             }
             switch decision {
             case .passThrough:
@@ -205,13 +225,22 @@ enum Output {
         }
     }
 
-    /// ⇧⌘5。privateState のソースを使い、実際の修飾キーの状態に影響させない。
+    /// ⇧⌘5。BTT と同じく Shift → Cmd → 5 を順に押して逆順に離す。
+    /// スクリーンショットのようなシステムのショートカットは、修飾キー自体のイベントが無いと反応しないことがある。
     static func screenshotShortcut() {
-        let source = CGEventSource(stateID: .privateState)
-        let keyCode: CGKeyCode = 23 // "5"
-        for down in [true, false] {
-            let event = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: down)
-            event?.flags = [.maskShift, .maskCommand]
+        let source = CGEventSource(stateID: .hidSystemState)
+        let shift: CGKeyCode = 56, command: CGKeyCode = 55, five: CGKeyCode = 23
+        let sequence: [(CGKeyCode, Bool, CGEventFlags)] = [
+            (shift, true, [.maskShift]),
+            (command, true, [.maskShift, .maskCommand]),
+            (five, true, [.maskShift, .maskCommand]),
+            (five, false, [.maskShift, .maskCommand]),
+            (command, false, [.maskShift]),
+            (shift, false, []),
+        ]
+        for (key, down, flags) in sequence {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: down)
+            event?.flags = flags
             event?.post(tap: .cghidEventTap)
         }
     }
