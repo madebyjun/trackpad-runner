@@ -4,14 +4,16 @@ import Foundation
 /// 1デバイスにつき1インスタンス。
 public final class TipTapRecognizer {
     public struct Config {
+        // 固定側の最短時間・タップの最長時間・固定側の許容移動量は BTT 6.723 の TipTap（2本指固定）と同じ値
+
         /// 固定側の指が、タップ開始前から置かれている必要がある最短時間
-        public var minAnchorAge = 0.1
+        public var minAnchorAge = 0.2
         /// タップとみなす最長の接触時間
-        public var maxTapDuration = 0.35
+        public var maxTapDuration = 0.25
         /// タップした指の許容移動量（正規化座標）
         public var maxTapMove = 0.04
         /// 固定側の指の許容移動量（2本指スクロール中の誤発火を防ぐ）
-        public var maxAnchorMove = 0.03
+        public var maxAnchorMove = 0.1
         /// 固定側の最も左の指より、どれだけ左にあればよいか
         public var leftMargin = 0.02
 

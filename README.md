@@ -8,7 +8,7 @@ BetterTouchTool で実際に使っていた機能だけを抜き出した、最�
 | 4本指でクリック | ⇧⌘5（スクリーンショット。CleanShot などに割り当てていればそちらが起動する） | Spring Light |
 | TipTap左（2本指を置いたまま、その左側を1本指でタップ） | 中クリック | Light Then Strong |
 
-ハプティックは BTT の組み込みパターンを再現しています。波形（`MTActuationCreateFromDictionary` に渡す辞書）とパルス列・間隔は、BTT 6.723 の実装から読み取った値です（`Sources/trackpad-runner/Haptics.swift`）。トラックパッドに指を置いたまま次を実行すると、単体で鳴らせます。
+ハプティックは BTT の組み込みパターンを再現しています。波形（`MTActuationCreateFromDictionary` に渡す辞書）、パルス列・間隔、`MTActuationActuate` の引数は、BTT 6.723 の実装から読み取った値です（`Sources/trackpad-runner/Haptics.swift`）。3本指／4本指クリックは BTT と同じく、押したときは通常のクリック感だけで、離したときにハプティックと動作が出ます。振動させるのは、直前に触っていたトラックパッドだけです。トラックパッドに指を置いたまま次を実行すると、単体で鳴らせます。
 
 ```bash
 swift run trackpad-runner --haptic 6
@@ -42,7 +42,7 @@ swift run trackpad-runner --headless
 - `MultitouchSupport.framework`（非公開）から指の位置と本数をフレームごとに受け取る
 - `CGEventTap` で左クリックを横取りし、押した瞬間の指の本数で「中クリックに変換 / 握りつぶして ⇧⌘5 を送る / そのまま通す」を決める
   - 押下時の判定は離すまで保持するので、途中で指の本数が変わってもボタンが押しっぱなしにならない
-- TipTap左は、固定の2本が 0.1 秒以上置かれている状態で、その左に置いた指が 0.35 秒以内・ほぼ動かずに離れたときに発火する
+- TipTap左は、固定の2本が 0.2 秒以上置かれている状態で、その左に置いた指が 0.25 秒以内・ほぼ動かずに離れたときに発火する（固定側の移動が 0.1 以上ならスクロールとみなして無視する。値は BTT と同じ）
 
 判定ロジックは `Sources/TrackpadRunnerCore` にあり、実機の入力もリプレイもこの同じ `Engine` を通ります。
 

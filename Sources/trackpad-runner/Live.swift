@@ -54,6 +54,8 @@ final class LiveRunner {
     private let engine = Engine()
     private let lock = NSLock()
     private var tap: CFMachPort?
+    /// 直前に指が触れていたトラックパッド。ハプティックはこれだけで鳴らす（BTT と同じ）
+    private var lastDevice: Int?
 
     var isEnabled: Bool {
         get { lock.withLock { engine.isEnabled } }
@@ -64,9 +66,10 @@ final class LiveRunner {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else { throw LiveError.accessibilityNotGranted }
 
-        engine.onTrigger = { trigger in
+        engine.onTrigger = { [unowned self] trigger in
             guard let pattern = hapticPatterns[trigger] else { return }
-            Haptics.play(pattern)
+            // onTrigger は lock の内側から呼ばれるので、lastDevice はそのまま読める
+            Haptics.play(pattern, device: lastDevice.flatMap { UnsafeMutableRawPointer(bitPattern: $0) })
             log.info("trigger=\(trigger.rawValue, privacy: .public) haptic=\(pattern.name, privacy: .public)")
         }
         engine.onAction = { action in
@@ -80,7 +83,10 @@ final class LiveRunner {
         frameHandler = { [weak self] device, touches in
             guard let self else { return }
             let t = now()
-            self.lock.withLock { self.engine.handleFrame(device: device, time: t, touches: touches) }
+            self.lock.withLock {
+                if !touches.isEmpty { self.lastDevice = device }
+                self.engine.handleFrame(device: device, time: t, touches: touches)
+            }
         }
         switch cmt_start(multitouchCallback) {
         case -1: throw LiveError.multitouchUnavailable

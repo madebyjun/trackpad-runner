@@ -40,8 +40,10 @@ int cmt_device_count(void);
 // 辞書の形式は BTT のカスタムハプティックと同じ（ActuationID / BaseWaveform / BaseMultipliers / Tones / ToneMultipliers）。
 CFTypeRef cmt_actuation_create(CFDictionaryRef waveform);
 
-// 振動オブジェクトを全トラックパッドで1回鳴らす（MTActuationActuate）。
+// 振動オブジェクトを1回鳴らす（MTActuationActuate）。
+// device にはフレームのコールバックで受け取ったデバイスを渡す（BTT と同じく、直前に触っていたトラックパッドだけを鳴らす）。
+// NULL なら全トラックパッドで鳴らす。
 // 戻り値: 鳴らしたデバイス数。フレームワークが読み込めない場合は -1。
-int cmt_actuation_play(CFTypeRef actuation);
+int cmt_actuation_play(CFTypeRef actuation, void *device);
 
 #endif

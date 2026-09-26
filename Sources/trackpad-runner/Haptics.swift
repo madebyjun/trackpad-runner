@@ -3,7 +3,8 @@ import Foundation
 import TrackpadRunnerCore
 
 /// BTT の組み込みハプティックを再現したもの。
-/// 波形・パルス列・間隔は BTT 6.723 の実装（BTTTouch actuatey:onAllDevices:onlyOnBuiltIn:）から読み取った値。
+/// 波形・パルス列・間隔は BTT 6.723 の実装（+[BTTTouch actuatey:onAllDevices:onlyOnBuiltIn:]）から読み取った値。
+/// BTT は macOS 10.13 以降（runningOn_10_13）では各パターンの後半のパルスを省くので、それに合わせている。
 enum HapticPattern: Int32, CaseIterable {
     case lightThenStrong = 3
     case doubleStrong = 4
@@ -22,12 +23,11 @@ enum HapticPattern: Int32, CaseIterable {
         let d = Haptics.pulseInterval
         switch self {
         case .doubleStrong:
-            return [(0, .strong), (d, .strong), (0, .strong), (d, .strong)]
+            return [(0, .strong), (0, .strong)]
         case .lightThenStrong:
-            return [(0, .light), (d, .light), (d + 50_000, .light),
-                    (0, .strong), (d, .strong), (d + 30_000, .strong)]
+            return [(0, .light), (d, .light), (0, .strong), (d, .strong)]
         case .springLight:
-            return [(0, .light)] + Array(repeating: (d, .light), count: 15)
+            return [(0, .light)] + Array(repeating: (d, .light), count: 11)
         }
     }
 }
@@ -51,21 +51,18 @@ enum Haptics {
     private static let strong: CFTypeRef? = cmt_actuation_create(waveform(amplitude: 200, baseMedium: 1.2, toneAmplitude: 0.035, toneDelay: 1.5) as CFDictionary)?.takeRetainedValue()
     private static let light: CFTypeRef? = cmt_actuation_create(waveform(amplitude: 20, baseMedium: 1.0, toneAmplitude: 0.015, toneDelay: 1) as CFDictionary)?.takeRetainedValue()
 
-    static func play(_ pattern: HapticPattern) {
-        queue.async {
-            for step in pattern.steps {
-                if step.delay > 0 { usleep(step.delay) }
-                _ = cmt_actuation_play(step.pulse == .strong ? strong : light)
-            }
-        }
+    /// device: 直前に触っていたトラックパッド（nil なら全トラックパッド）
+    static func play(_ pattern: HapticPattern, device: UnsafeMutableRawPointer?) {
+        queue.async { _ = playNow(pattern, device: device) }
     }
 
-    /// 同期的に鳴らし、最初のパルスを鳴らせたデバイス数を返す（CLI の確認用）。
-    static func playNow(_ pattern: HapticPattern) -> Int32 {
+    /// 同期的に鳴らし、最初のパルスを鳴らせたデバイス数を返す。
+    @discardableResult
+    static func playNow(_ pattern: HapticPattern, device: UnsafeMutableRawPointer? = nil) -> Int32 {
         var first: Int32 = 0
         for (i, step) in pattern.steps.enumerated() {
             if step.delay > 0 { usleep(step.delay) }
-            let count = cmt_actuation_play(step.pulse == .strong ? strong : light)
+            let count = cmt_actuation_play(step.pulse == .strong ? strong : light, device)
             if i == 0 { first = count }
         }
         return first

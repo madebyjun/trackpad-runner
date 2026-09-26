@@ -65,9 +65,11 @@ case("tiptap-left", "TipTap左 → 中クリック", [10], anchors() + [finger(3
 case("tiptap-right", "右側のタップは発火しない", [11], anchors() + [finger(3, .85, .4, .3, .4)], [], [])
 case("tiptap-long-press", "長押し（0.6秒）は発火しない", [12], anchors() + [finger(3, .3, .4, .2, .8)], [], [])
 case("tiptap-moving-tap", "タップした指が動いた（スワイプ）場合は発火しない", [13], anchors() + [finger(3, .3, .4, .3, .45, dy=.15)], [], [])
-case("tiptap-anchors-scrolling", "2本指スクロール中は発火しない", [14], anchors(dy=.4) + [finger(3, .3, .4, .4, .5)], [], [])
+case("tiptap-anchors-scrolling", "2本指スクロール中は発火しない（タップ中に固定側が 0.1 以上動く）", [14],
+     [finger(1, .55, .05, 0, 1, dy=.9), finger(2, .7, .05, 0, 1, dy=.9), finger(3, .3, .4, .3, .5)], [], [])
 case("tiptap-with-physical-click", "タップ中に物理クリック → 3本指クリックだけが効き、TipTap は発火しない", [15, 2],
      anchors() + [finger(3, .3, .4, .3, .45)], click(.35, .4), [], [C, C], triggers=["threeFingerClick"])
+case("tiptap-anchors-jitter", "固定側がわずかに動いていても（0.1 未満）発火する", [14], anchors(dy=.2) + [finger(3, .3, .4, .3, .4)], [], ["middleClick"], triggers=["tipTapLeft"])
 case("tiptap-one-anchor", "固定が1本のときは発火しない", [16], [finger(1, .6, .4, 0, 1), finger(3, .3, .4, .3, .4)], [], [])
 case("tiptap-three-anchors", "固定が3本のときは発火しない", [16],
      anchors() + [finger(4, .8, .4, 0, 1), finger(3, .3, .4, .3, .4)], [], [])
