@@ -146,8 +146,10 @@ final class LiveRunner {
                 }
             }
             if type == .leftMouseDown {
-                let (fingers, source) = self.lock.withLock { (self.engine.fingerCountAtLastClick, self.engine.sourceAtLastClick) }
-                log.info("mouseDown source=\(source.map { String($0) } ?? "none", privacy: .public) fingers=\(fingers) waited=\(Int(waited * 1000))ms decision=\(decision.rawValue, privacy: .public)")
+                let (fingers, source, pressAge) = self.lock.withLock {
+                    (self.engine.fingerCountAtLastClick, self.engine.sourceAtLastClick, self.engine.pressAgeAtLastClick)
+                }
+                log.info("mouseDown source=\(source.map { String($0) } ?? "none", privacy: .public) fingers=\(fingers) waited=\(Int(waited * 1000))ms pressAge=\(pressAge.map { "\(Int($0 * 1000))ms" } ?? "-", privacy: .public) decision=\(decision.rawValue, privacy: .public)")
             }
             switch decision {
             case .passThrough:

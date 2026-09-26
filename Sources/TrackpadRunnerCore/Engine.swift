@@ -60,6 +60,8 @@ public final class Engine {
     public private(set) var fingerCountAtLastClick = 0
     /// 直近の mouseDown のクリック元のトラックパッド（ログ用）。分からなければ nil
     public private(set) var sourceAtLastClick: Int?
+    /// 直近の mouseDown の時点で、クリック元が押され始めてからの時間（ログ用。押す力で決めたときだけ）
+    public private(set) var pressAgeAtLastClick: Double?
 
     private enum Press { case middle, shortcut }
 
@@ -68,8 +70,12 @@ public final class Engine {
     /// この押す力以上の指があるトラックパッドをクリック元とみなす。
     /// 実機（内蔵 Force Touch トラックパッド）で、指を置いただけは 0〜35 程度、クリックはピークが 100〜130 だった
     public static let clickPressure = 50.0
-    /// 押す力が clickPressure 以上だったのがこの時間以内なら、クリック元とみなす
+    /// 押す力が clickPressure 以上だった最後のフレームがこの時間以内なら、クリック元とみなす
     public static let pressWindow = 0.08
+    /// 押し始め（押す力が clickPressure を超えた時点）からこの時間を過ぎたら、クリック元とみなさない。
+    /// 押し続けているだけ（クリックしない）のトラックパッドが、あとのマウスのクリックのクリック元にならないようにする。
+    /// ゆっくり押し込んだクリックを見逃さないよう、長めにとる
+    public static let maxPressAge = 0.2
     /// 押す力の強いフレームが左クリックより遅れて届く場合に、待つ最長時間
     public static let maxPressureWait = 0.03
 
@@ -79,8 +85,10 @@ public final class Engine {
     private var forceDevices: Set<Int> = []
     /// 押す力が clickPressure 以上だった最後のフレームの時刻
     private var pressedTime: [Int: Double] = [:]
-    /// 押す力が clickPressure を超えた（押され始めた）時刻。複数台が押されているときに、新しく押された方を選ぶ
+    /// 押す力が clickPressure を超えた（押され始めた）時刻。下回ったら次に超えたときに測り直す
     private var pressStartTime: [Int: Double] = [:]
+    /// 直前のフレームで押す力が clickPressure 以上だったトラックパッド
+    private var pressedNow: Set<Int> = []
     private var tipTaps: [Int: TipTapRecognizer] = [:]
     /// down 時の判定。up / dragged まで保持し、途中で指の本数が変わっても種類を食い違わせない。
     private var press: Press?
@@ -97,8 +105,11 @@ public final class Engine {
         if touching.contains(where: { $0.pressure != nil }) { forceDevices.insert(device) }
         // 3本指クリックでも強く押すのは1本だけなので、指ごとの最大値を見る（BTT と同じ）
         if let pressure = touching.compactMap(\.pressure).max(), pressure >= Self.clickPressure {
-            if pressedTime[device].map({ time - $0 > Self.pressWindow }) ?? true { pressStartTime[device] = time }
+            if !pressedNow.contains(device) { pressStartTime[device] = time }
+            pressedNow.insert(device)
             pressedTime[device] = time
+        } else {
+            pressedNow.remove(device)
         }
 
         let recognizer = tipTaps[device] ?? TipTapRecognizer(config: tipTapConfig)
@@ -112,6 +123,9 @@ public final class Engine {
     public func mouseDown(time: Double) -> MouseDecision {
         for recognizer in tipTaps.values { recognizer.noteClick(at: time) }
         sourceAtLastClick = clickSource(at: time)
+        pressAgeAtLastClick = sourceAtLastClick.flatMap { device in
+            pressedDevices(at: time).contains(device) ? pressStartTime[device].map { time - $0 } : nil
+        }
         fingerCountAtLastClick = sourceAtLastClick.map { touchingCount[$0] ?? 0 } ?? 0
         guard isEnabled else { press = nil; return .passThrough }
 
@@ -172,6 +186,7 @@ public final class Engine {
         forceDevices.filter { device in
             freshTouchingCount(device: device, at: time) > 0
                 && (pressedTime[device].map { time - $0 <= Self.pressWindow } ?? false)
+                && (pressStartTime[device].map { time - $0 <= Self.maxPressAge } ?? false)
         }
     }
 
