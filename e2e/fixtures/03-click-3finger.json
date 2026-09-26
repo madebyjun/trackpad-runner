@@ -1,7 +1,8 @@
 {
- "name": "3本指クリック → 中クリック",
+ "name": "3本指クリック → 中クリック（ハプティックは離したとき）",
  "failureModes": [
-  2
+  2,
+  9
  ],
  "events": [
   {
@@ -1191,6 +1192,11 @@
   "actions": [],
   "triggers": [
    "threeFingerClick"
+  ],
+  "timeline": [
+   "down",
+   "up",
+   "trigger:threeFingerClick"
   ],
   "mouse": [
    "convertToMiddle",

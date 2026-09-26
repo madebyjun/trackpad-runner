@@ -1,7 +1,8 @@
 {
- "name": "4本指クリック → ⇧⌘5（左クリックは握りつぶす）",
+ "name": "4本指クリック → ⇧⌘5（左クリックは握りつぶす。ハプティックと ⇧⌘5 は離したとき）",
  "failureModes": [
-  3
+  3,
+  9
  ],
  "events": [
   {
@@ -1493,6 +1494,12 @@
   ],
   "triggers": [
    "fourFingerClick"
+  ],
+  "timeline": [
+   "down",
+   "up",
+   "trigger:fourFingerClick",
+   "action:screenshotShortcut"
   ],
   "mouse": [
    "swallow",

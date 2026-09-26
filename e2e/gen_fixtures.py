@@ -33,8 +33,9 @@ def build(fingers, mouse, end=None):
     return events
 
 cases = []
-def case(file, name, fms, fingers, mouse, actions, decisions=None, events=None, triggers=()):
+def case(file, name, fms, fingers, mouse, actions, decisions=None, events=None, triggers=(), timeline=None):
     exp = dict(actions=actions, triggers=list(triggers))
+    if timeline is not None: exp["timeline"] = timeline
     if decisions is not None: exp["mouse"] = decisions
     cases.append((file, dict(name=name, failureModes=fms, events=events or build(fingers, mouse), expect=exp)))
 
@@ -45,8 +46,8 @@ anchors = lambda on=0.0, off=1.0, dx=0.0, dy=0.0: [finger(1, 0.55, 0.4, on, off,
 # クリック系
 case("click-1finger", "1本指クリックは素通り", [1], [finger(1, .5, .5, 0, .5)], click(.2, .3), [], [P, P])
 case("click-2finger", "2本指クリックは素通り", [1], [finger(1, .45, .5, 0, .5), finger(2, .55, .5, 0, .5)], click(.2, .3), [], [P, P])
-case("click-3finger", "3本指クリック → 中クリック", [2], [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
-case("click-4finger", "4本指クリック → ⇧⌘5（左クリックは握りつぶす）", [3], [finger(i, .2 + .1 * i, .5, 0, .5) for i in range(1, 5)], click(.2, .3), ["screenshotShortcut"], [S, S], triggers=["fourFingerClick"])
+case("click-3finger", "3本指クリック → 中クリック（ハプティックは離したとき）", [2, 9], [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"], timeline=["down", "up", "trigger:threeFingerClick"])
+case("click-4finger", "4本指クリック → ⇧⌘5（左クリックは握りつぶす。ハプティックと ⇧⌘5 は離したとき）", [3, 9], [finger(i, .2 + .1 * i, .5, 0, .5) for i in range(1, 5)], click(.2, .3), ["screenshotShortcut"], [S, S], triggers=["fourFingerClick"], timeline=["down", "up", "trigger:fourFingerClick", "action:screenshotShortcut"])
 case("click-3finger-lift-before-up", "3本で押し、2本で離しても up は中クリックのまま", [4],
      [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, 0, .25)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
 case("click-2finger-add-before-up", "2本で押し、4本になってから離しても素通りのまま", [4],

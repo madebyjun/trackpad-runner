@@ -88,12 +88,9 @@ public final class Engine {
         switch fingerCountAtLastClick {
         case 3:
             press = .middle
-            onTrigger(.threeFingerClick)
             return .convertToMiddle
         case 4:
             press = .shortcut
-            onTrigger(.fourFingerClick)
-            onAction(.screenshotShortcut)
             return .swallow
         default:
             press = nil
@@ -105,8 +102,18 @@ public final class Engine {
         decision(for: press)
     }
 
+    /// BTT と同じく、ハプティックと動作は離したときに出す（押したときは通常のクリック感だけ）。
     public func mouseUp() -> MouseDecision {
         defer { press = nil }
+        switch press {
+        case .middle:
+            onTrigger(.threeFingerClick)
+        case .shortcut:
+            onTrigger(.fourFingerClick)
+            onAction(.screenshotShortcut)
+        case nil:
+            break
+        }
         return decision(for: press)
     }
 

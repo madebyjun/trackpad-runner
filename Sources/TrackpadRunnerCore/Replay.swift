@@ -23,6 +23,8 @@ public struct Recording: Codable {
         public var triggers: [Trigger]?
         /// mouse イベントごとの判定（省略時は検証しない）
         public var mouse: [MouseDecision]?
+        /// mouse / trigger / action を起きた順に並べたもの（省略時は検証しない）
+        public var timeline: [String]?
     }
 
     public var name: String
@@ -52,8 +54,9 @@ public enum Replay {
         var actions: [Action] = []
         var decisions: [MouseDecision] = []
         var triggers: [Trigger] = []
-        engine.onAction = { actions.append($0) }
-        engine.onTrigger = { triggers.append($0) }
+        var timeline: [String] = []
+        engine.onAction = { actions.append($0); timeline.append("action:\($0.rawValue)") }
+        engine.onTrigger = { triggers.append($0); timeline.append("trigger:\($0.rawValue)") }
 
         for event in recording.events {
             if let touches = event.touches {
@@ -61,20 +64,21 @@ public enum Replay {
             }
             switch event.mouse {
             case nil: break
-            case "down": decisions.append(engine.mouseDown())
-            case "dragged": decisions.append(engine.mouseDragged())
-            case "up": decisions.append(engine.mouseUp())
+            case "down": timeline.append("down"); decisions.append(engine.mouseDown())
+            case "dragged": timeline.append("dragged"); decisions.append(engine.mouseDragged())
+            case "up": timeline.append("up"); decisions.append(engine.mouseUp())
             case let other?:
                 throw NSError(domain: "Replay", code: 1, userInfo: [NSLocalizedDescriptionKey: "\(file): 不明な mouse イベント \(other)"])
             }
         }
 
-        let actual = Recording.Expectation(actions: actions, triggers: triggers, mouse: decisions)
+        let actual = Recording.Expectation(actions: actions, triggers: triggers, mouse: decisions, timeline: timeline)
         var passed = true
         if let expect = recording.expect {
             passed = expect.actions == actions
                 && (expect.triggers.map { $0 == triggers } ?? true)
                 && (expect.mouse.map { $0 == decisions } ?? true)
+                && (expect.timeline.map { $0 == timeline } ?? true)
         }
         return ReplayResult(
             file: file, name: recording.name, failureModes: recording.failureModes ?? [],
@@ -104,6 +108,9 @@ public enum Replay {
         }
         if let mouse = e.mouse, !mouse.isEmpty {
             parts.append("mouse: " + mouse.map(\.rawValue).joined(separator: " → "))
+        }
+        if let timeline = e.timeline, timeline.contains(where: { $0.contains(":") }) {
+            parts.append("順序: " + timeline.joined(separator: " → "))
         }
         return parts.joined(separator: " / ")
     }
