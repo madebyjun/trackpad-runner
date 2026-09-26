@@ -10,6 +10,7 @@ let usage = """
   trackpad-runner --list-devices          トラックパッドの数を表示する
   trackpad-runner --haptic N              BTT のハプティック N を鳴らす（3 / 4 / 6。指を置いたまま実行）
   trackpad-runner --send-shortcut         ⇧⌘5 を送る（アクセシビリティ権限が必要）
+  trackpad-runner --event-taps PID        プロセス PID のイベントタップの数を表示する（E2E 用）
   trackpad-runner --record FILE [--seconds N]
                                           実機の入力を N 秒（既定 10）記録して JSON に保存する
   trackpad-runner --replay FILE... [--report-dir DIR]
@@ -91,6 +92,15 @@ case "--haptic":
 case "--send-shortcut":
     Output.screenshotShortcut()
 
+case "--event-taps":
+    guard let value = option("--event-taps", in: args), let pid = pid_t(value) else { fail(usage) }
+    var count: UInt32 = 0
+    CGGetEventTapList(0, nil, &count)
+    var taps = [CGEventTapInformation](repeating: CGEventTapInformation(), count: Int(count))
+    CGGetEventTapList(count, &taps, &count)
+    let mine = taps.prefix(Int(count)).filter { $0.tappingProcess == pid }
+    print("total=\(mine.count) enabled=\(mine.filter(\.enabled).count)")
+
 case "--record":
     guard let file = option("--record", in: args) else { fail(usage) }
     let seconds = option("--seconds", in: args).flatMap(Double.init) ?? 10
@@ -104,6 +114,9 @@ case "--record":
 
 case "--headless":
     let runner = LiveRunner()
+    runner.onPermissionChange = { granted in
+        fputs(granted ? "アクセシビリティ権限が戻ったので再開しました\n" : "アクセシビリティ権限が外れたので、クリックの横取りをやめました\n", stderr)
+    }
     do { try runner.start() } catch { fail("\(error)") }
     print("動作中（Ctrl-C で終了）")
     withExtendedLifetime(runner) { CFRunLoopRun() }

@@ -127,6 +127,11 @@ public final class Engine {
         return decision(for: press)
     }
 
+    /// 押下中の判定を捨てる（クリックの横取りをやめるとき用）。以後の解放はそのまま通す。
+    public func cancelPress() {
+        press = nil
+    }
+
     private func decision(for press: Press?) -> MouseDecision {
         switch press {
         case .middle: .convertToMiddle

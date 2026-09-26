@@ -67,6 +67,12 @@ log stream --level info --predicate 'subsystem == "com.madebyjun.trackpad-runner
 
 結果は `e2e-artifacts/report.md` と `report.json` に出力されます。各ケースは [docs/failure-modes.md](docs/failure-modes.md) の失敗パターンに対応しています。
 
+起動中にアクセシビリティ権限を外したときの動作は、手順に沿って権限を切り替えながら確認します（結果は `e2e-artifacts/permission/report.md`）。権限が外れるとクリックの横取りをやめ、戻ると再起動せずに再開します。
+
+```bash
+./scripts/e2e-permission.sh
+```
+
 実機の入力を記録してケースにすることもできます（アクセシビリティ権限が必要です）。
 
 ```bash

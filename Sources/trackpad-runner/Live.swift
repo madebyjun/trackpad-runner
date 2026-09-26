@@ -53,26 +53,36 @@ private func now() -> Double { ProcessInfo.processInfo.systemUptime }
 final class LiveRunner {
     private let engine = Engine()
     private let lock = NSLock()
-    private var tap: CFMachPort?
+    private var tap: EventTap?
+    private var permissionTimer: Timer?
     /// 直前に指が触れていたトラックパッド。ハプティックはこれだけで鳴らす（BTT と同じ）
     private var lastDevice: Int?
+    /// アクセシビリティ権限が外れてクリックの横取りをやめている間は true（lock で保護）
+    private var suspended = false
+
+    /// 権限が外れた / 戻ったときに main スレッドで呼ぶ。引数は権限があるかどうか
+    var onPermissionChange: (Bool) -> Void = { _ in }
 
     var isEnabled: Bool {
         get { lock.withLock { engine.isEnabled } }
         set { lock.withLock { engine.isEnabled = newValue } }
     }
 
+    var hasPermission: Bool { lock.withLock { !suspended } }
+
     func start() throws {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else { throw LiveError.accessibilityNotGranted }
 
         engine.onTrigger = { [unowned self] trigger in
-            guard let pattern = hapticPatterns[trigger] else { return }
-            // onTrigger は lock の内側から呼ばれるので、lastDevice はそのまま読める
+            // onTrigger / onAction は lock の内側から呼ばれるので、suspended / lastDevice はそのまま読める。
+            // 権限が無いとイベントを送れないので、ハプティックだけ鳴らすことはしない
+            guard !suspended, let pattern = hapticPatterns[trigger] else { return }
             Haptics.play(pattern, device: lastDevice.flatMap { UnsafeMutableRawPointer(bitPattern: $0) })
             log.info("trigger=\(trigger.rawValue, privacy: .public) haptic=\(pattern.name, privacy: .public)")
         }
-        engine.onAction = { action in
+        engine.onAction = { [unowned self] action in
+            guard !suspended else { return }
             log.info("action=\(action.rawValue, privacy: .public)")
             switch action {
             case .middleClick: Output.middleClick()
@@ -94,7 +104,17 @@ final class LiveRunner {
         default: break
         }
 
-        tap = try installEventTap(listenOnly: false) { [weak self] type, event in
+        tap = try makeTap()
+
+        // 起動中に権限を外されると、残ったタップが左クリックを止めてしまう。1秒ごとに確認して、
+        // 外れたらタップを取り外し、戻ったら作り直す
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.checkPermission() }
+        RunLoop.main.add(timer, forMode: .common)
+        permissionTimer = timer
+    }
+
+    private func makeTap() throws -> EventTap {
+        let tap = try EventTap(listenOnly: false) { [weak self] type, event in
             guard let self else { return Unmanaged.passUnretained(event) }
             let decision: MouseDecision = self.lock.withLock {
                 switch type {
@@ -122,6 +142,29 @@ final class LiveRunner {
             }
             return Unmanaged.passUnretained(event)
         }
+        tap.onDisabledWithoutPermission = { [weak self] in self?.checkPermission() }
+        return tap
+    }
+
+    private func checkPermission() {
+        let trusted = AXIsProcessTrusted()
+        if !trusted, let tap {
+            tap.remove()
+            self.tap = nil
+            lock.withLock {
+                suspended = true
+                engine.cancelPress()
+            }
+            log.error("アクセシビリティ権限が外れたので、クリックの横取りをやめました")
+            onPermissionChange(false)
+        } else if trusted, tap == nil {
+            // 権限が戻った直後はタップを作れないことがある。その場合は次の確認で再試行する
+            guard let newTap = try? makeTap() else { return }
+            tap = newTap
+            lock.withLock { suspended = false }
+            log.info("アクセシビリティ権限が戻ったので、クリックの横取りを再開しました")
+            onPermissionChange(true)
+        }
     }
 }
 
@@ -131,7 +174,7 @@ final class Recorder {
     private var events: [Recording.Event] = []
     private var deviceIndex: [Int: Int] = [:]
     private let startTime = now()
-    private var tap: CFMachPort?
+    private var tap: EventTap?
 
     func start(seconds: Double, output: URL) throws {
         switch cmt_start(multitouchCallback) {
@@ -147,7 +190,7 @@ final class Recorder {
                 self.events.append(.init(t: now() - self.startTime, device: index, touches: touches))
             }
         }
-        tap = try installEventTap(listenOnly: true) { [weak self] type, event in
+        tap = try EventTap(listenOnly: true) { [weak self] type, event in
             guard let self else { return Unmanaged.passUnretained(event) }
             let name = switch type {
             case .leftMouseDown: "down"
@@ -179,38 +222,62 @@ final class Recorder {
 
 private typealias TapHandler = (CGEventType, CGEvent) -> Unmanaged<CGEvent>?
 
-private final class TapBox {
-    let handler: TapHandler
-    var port: CFMachPort?
-    init(handler: @escaping TapHandler) { self.handler = handler }
-}
+/// 左ボタンのイベントタップ。main の run loop で動く。
+private final class EventTap {
+    private let handler: TapHandler
+    private var port: CFMachPort?
+    private var source: CFRunLoopSource?
+    /// 権限が無い状態で OS にタップを無効化されたときに呼ぶ（main スレッド）
+    var onDisabledWithoutPermission: () -> Void = {}
 
-private func installEventTap(listenOnly: Bool, handler: @escaping TapHandler) throws -> CFMachPort {
-    let mask: CGEventMask = [CGEventType.leftMouseDown, .leftMouseUp, .leftMouseDragged]
-        .reduce(0) { $0 | (1 << $1.rawValue) }
-    let box = TapBox(handler: handler)
-    let callback: CGEventTapCallBack = { _, type, event, userInfo in
-        let box = Unmanaged<TapBox>.fromOpaque(userInfo!).takeUnretainedValue()
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            // OS に無効化されたら再度有効化する
-            if let port = box.port { CGEvent.tapEnable(tap: port, enable: true) }
-            return Unmanaged.passUnretained(event)
+    init(listenOnly: Bool, handler: @escaping TapHandler) throws {
+        self.handler = handler
+        let mask: CGEventMask = [CGEventType.leftMouseDown, .leftMouseUp, .leftMouseDragged]
+            .reduce(0) { $0 | (1 << $1.rawValue) }
+        let callback: CGEventTapCallBack = { _, type, event, userInfo in
+            let tap = Unmanaged<EventTap>.fromOpaque(userInfo!).takeUnretainedValue()
+            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                tap.handleDisabled()
+                return Unmanaged.passUnretained(event)
+            }
+            return tap.handler(type, event)
         }
-        return box.handler(type, event)
+        // userInfo は保持しない。remove() でタップを無効にしてから手放すこと
+        guard let port = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: listenOnly ? .listenOnly : .defaultTap,
+            eventsOfInterest: mask,
+            callback: callback,
+            userInfo: Unmanaged.passUnretained(self).toOpaque()
+        ) else { throw LiveError.eventTapFailed }
+        self.port = port
+        source = CFMachPortCreateRunLoopSource(nil, port, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: port, enable: true)
     }
-    guard let port = CGEvent.tapCreate(
-        tap: .cgSessionEventTap,
-        place: .headInsertEventTap,
-        options: listenOnly ? .listenOnly : .defaultTap,
-        eventsOfInterest: mask,
-        callback: callback,
-        userInfo: Unmanaged.passRetained(box).toOpaque()
-    ) else { throw LiveError.eventTapFailed }
-    box.port = port
-    let source = CFMachPortCreateRunLoopSource(nil, port, 0)
-    CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-    CGEvent.tapEnable(tap: port, enable: true)
-    return port
+
+    deinit { remove() }
+
+    private func handleDisabled() {
+        guard let port else { return }
+        if AXIsProcessTrusted() {
+            // タイムアウトなどで OS に無効化されたら再度有効化する
+            CGEvent.tapEnable(tap: port, enable: true)
+        } else {
+            // 権限が無いまま再有効化すると、クリックが止まり続ける。取り外しはコールバックの外で行う
+            DispatchQueue.main.async { [weak self] in self?.onDisabledWithoutPermission() }
+        }
+    }
+
+    func remove() {
+        guard let port else { return }
+        CGEvent.tapEnable(tap: port, enable: false)
+        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+        CFMachPortInvalidate(port)
+        self.port = nil
+        source = nil
+    }
 }
 
 // MARK: - 出力
