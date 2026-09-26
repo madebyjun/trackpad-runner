@@ -107,6 +107,8 @@ case("tiptap-early-tap-too-long", "早めに置いた3本目も、候補にな�
      [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .6)], [], [])
 case("tiptap-retap-too-soon", "発火の直後（0.2 秒以内）の次のタップは発火しない（BTT は準備を測り直す）", [35, 19],
      anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .45, .55)], [], ["middleClick"], triggers=["tipTapLeft"])
+case("tiptap-click-before-candidate", "3本目を置いてから候補になる前に3本指クリックしても、TipTap は発火しない（二重発火しない）", [36, 15, 2],
+     [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .4)], click(.2, .25), [], [C, C], triggers=["threeFingerClick"])
 case("tiptap-too-wide", "3本の x の広がりが 0.6 以上なら発火しない", [33],
      [finger(1, .5, .4, 0, 1), finger(2, .8, .4, 0, 1), finger(3, .15, .4, .3, .4)], [], [])
 case("tiptap-margin-too-small", "タップが固定側の左端から 0.03 未満しか離れていなければ発火しない", [34],

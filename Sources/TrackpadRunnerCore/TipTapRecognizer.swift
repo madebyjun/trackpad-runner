@@ -21,6 +21,8 @@ public final class TipTapRecognizer {
         public var minSpread = 0.03
         /// 3本の指の x の広がりの上限
         public var maxWidth = 0.6
+        /// 物理クリックのあと、候補にしない時間（BTT の justClicked。3本指クリックとの二重発火を防ぐ）
+        public var clickCooldown = 0.7
 
         public init() {}
     }
@@ -38,15 +40,18 @@ public final class TipTapRecognizer {
     /// 直近の2本指フレームの指（固定側）
     private var anchors: [Int: Touch] = [:]
     private var candidate: Candidate?
+    private var lastClickTime = -Double.infinity
     private var lastTime = -Double.infinity
 
     public init(config: Config = .init()) {
         self.config = config
     }
 
-    /// タップ中に物理クリックがあった場合は TipTap として扱わない（3本指クリックとの二重発火防止）。
-    public func noteClick() {
+    /// 物理クリックがあったことを伝える。候補中なら TipTap として扱わず、
+    /// 候補になる前なら clickCooldown の間は候補にしない（3本指クリックとの二重発火防止）。
+    public func noteClick(at time: Double) {
         candidate?.clicked = true
+        lastClickTime = time
     }
 
     /// 触れている指だけを渡す。発火すべきフレームで true を返す。
@@ -56,6 +61,7 @@ public final class TipTapRecognizer {
             readyTime = nil
             anchors = [:]
             candidate = nil
+            lastClickTime = -.infinity
         }
         lastTime = time
 
@@ -79,6 +85,7 @@ public final class TipTapRecognizer {
         case 3:
             guard candidate == nil,
                   let ready = readyTime, time - ready > config.readyDelay,
+                  time - lastClickTime > config.clickCooldown,
                   anchors.count == 2, anchors.keys.allSatisfy(ids.contains),
                   let tap = touching.first(where: { anchors[$0.id] == nil }),
                   let anchorLeft = anchors.values.map(\.x).min(),
