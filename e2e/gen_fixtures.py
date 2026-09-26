@@ -170,8 +170,8 @@ case("force-both-pressed-reverse", "Force Touch 2台: 3本で押したあと、�
      click(.2, .3), [], [P, P])
 case("force-mixed-legacy-click", "Force Touch に3本置いたまま、押す力が分からないトラックパッドを1本指でクリック → 素通り", [52],
      [ff(i, .3 + .1 * i) for i in range(1, 4)] + [finger(9, .5, .5, 0, .5, device=1)], click(.2, .3), [], [P, P])
-case("force-mixed-legacy-3finger", "Force Touch に1本置いたまま、押す力が分からないトラックパッドで3本指クリック → 中クリック", [52, 44],
-     [ff(1, .5)] + [finger(10 + i, .3 + .1 * i, .5, 0, .5, device=1) for i in range(1, 4)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-mixed-legacy-3finger", "Force Touch に1本置いたまま、押す力が分からないトラックパッドで3本指クリック → どちらのクリックか分からないので素通り（main と同じ）", [52, 61],
+     [ff(1, .5)] + [finger(10 + i, .3 + .1 * i, .5, 0, .5, device=1) for i in range(1, 4)], click(.2, .3), [], [P, P])
 case("force-3finger-drag", "Force Touch: 3本指で押したままドラッグ（押す力が途中で弱まる）→ 最後まで中ボタン", [5, 4],
      [ff(1, .4), ff(2, .5, pressure=press(.18, .22)), ff(3, .6)], [(.2, "down"), (.3, "dragged"), (.4, "dragged"), (.45, "up")], [], [C, C, C, C], triggers=["threeFingerClick"])
 case("force-rest2-no-wait", "Force Touch: 2本置いたままマウスをクリックしても待たない（通常のクリックを遅らせない）", [48],
@@ -187,6 +187,13 @@ case("force-slow-press", "Force Touch: ゆっくり押し込んだ3本指クリ�
 case("force-repress", "Force Touch: 押し続けたあといったん力を抜き、指を置いたまま押し直して3本指クリック → 中クリック", [59, 57],
      [ff(1, .4, off=.6), ff(2, .5, off=.6, pressure=lambda t: 120 if (t < .3 or .34 <= t < .5) else REST), ff(3, .6, off=.6)],
      click(.37, .45), [], [C, C], triggers=["threeFingerClick"])
+case("force-mixed-legacy-4finger-mouse", "Force Touch に1本、押す力が分からないトラックパッドに4本置いたままマウスでクリック → 握りつぶさず素通り（PR #6 の Codex レビューの指摘）", [61, 1],
+     [ff(1, .5)] + [finger(10 + i, .2 + .1 * i, .5, 0, .5, device=1) for i in range(1, 5)], click(.2, .3), [], [P, P])
+FA = lambda on=0.0, off=1.0, device=0: [finger(1, .55, .4, on, off, device=device, pressure=REST), finger(2, .7, .4, on, off, device=device, pressure=REST)]
+case("force-tiptap-during-wait", "Force Touch: TipTap の候補中にマウスでクリックし、押す力を待っている間にタップした指を離す → TipTap は発火しない（PR #6 の Codex レビューの指摘）", [60, 15],
+     FA() + [finger(3, .3, .4, .3, .41, pressure=REST)], click(.4, .5), [], [P, P], timeline=["wait", "down", "up"])
+case("force-tiptap-during-wait-other-device", "Force Touch 2台: 片方に1本置き、もう片方の TipTap の候補中にマウスでクリックして待っている間にタップを離す → TipTap は発火しない", [60, 15],
+     [ff(9, .5, off=1.0, device=1)] + FA() + [finger(3, .3, .4, .3, .41, pressure=REST)], click(.4, .5), [], [P, P], timeline=["wait", "down", "up"])
 case("force-tiptap-left", "Force Touch: 押す力付きのフレームでも TipTap左は発火する", [10],
      [finger(1, .55, .4, 0, 1, pressure=REST), finger(2, .7, .4, 0, 1, pressure=REST), finger(3, .3, .4, .3, .4, pressure=REST)], [], ["middleClick"], triggers=["tipTapLeft"])
 

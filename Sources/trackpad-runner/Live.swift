@@ -133,6 +133,7 @@ final class LiveRunner {
             var waited = 0.0
             if type == .leftMouseDown {
                 let start = now()
+                self.lock.withLock { self.engine.noteMouseDown(time: start) }
                 while self.lock.withLock({ self.engine.shouldWaitForPressure(at: now()) }), now() - start < Engine.maxPressureWait {
                     usleep(2_000)
                 }

@@ -81,6 +81,7 @@ public enum Replay {
             case nil: break
             case "down":
                 if engine.shouldWaitForPressure(at: event.t) {
+                    engine.noteMouseDown(time: event.t)
                     timeline.append("wait")
                     pendingDown = event.t
                 } else {

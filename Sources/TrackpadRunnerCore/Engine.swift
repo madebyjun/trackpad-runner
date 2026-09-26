@@ -120,8 +120,14 @@ public final class Engine {
         }
     }
 
-    public func mouseDown(time: Double) -> MouseDecision {
+    /// 左クリックが届いたことを TipTap に伝える。押す力のフレームを待つ前に呼ぶこと
+    /// （待っている間に TipTap左が発火して、クリックと二重にならないように）
+    public func noteMouseDown(time: Double) {
         for recognizer in tipTaps.values { recognizer.noteClick(at: time) }
+    }
+
+    public func mouseDown(time: Double) -> MouseDecision {
+        noteMouseDown(time: time)
         sourceAtLastClick = clickSource(at: time)
         pressAgeAtLastClick = sourceAtLastClick.flatMap { device in
             pressedDevices(at: time).contains(device) ? pressStartTime[device].map { time - $0 } : nil
@@ -171,15 +177,15 @@ public final class Engine {
 
     /// CGEvent にはクリック元のトラックパッドの情報が無いので、フレームから推定する。
     /// 1. Force Touch のトラックパッドで、最近強く押されたもの（複数なら押され始めたのが最も新しいもの）
-    /// 2. 押す力が分からないトラックパッドで、新しい接触があるものが1台だけならそれ
-    ///    （Force Touch の方に置いているだけの指は、押されていないのでクリック元ではない）
+    /// 2. 新しい接触があるのが、押す力が分からないトラックパッド1台だけならそれ
+    ///    （Force Touch の方にも触れているなら、どちらのクリックか分からない）
     /// どれにも当たらなければ nil（マウスのクリックなど。通常のクリックを握りつぶさないよう、そのまま通す）
     private func clickSource(at time: Double) -> Int? {
         if let pressed = pressedDevices(at: time).max(by: { (pressStartTime[$0]!, $0) < (pressStartTime[$1]!, $1) }) {
             return pressed
         }
-        let touched = touchingCount.keys.filter { !forceDevices.contains($0) && freshTouchingCount(device: $0, at: time) > 0 }
-        return touched.count == 1 ? touched[0] : nil
+        let touched = touchingCount.keys.filter { freshTouchingCount(device: $0, at: time) > 0 }
+        return touched.count == 1 && !forceDevices.contains(touched[0]) ? touched[0] : nil
     }
 
     private func pressedDevices(at time: Double) -> [Int] {
