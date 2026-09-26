@@ -10,8 +10,6 @@ let usage = """
   trackpad-runner --list-devices          トラックパッドの数を表示する
   trackpad-runner --haptic N              BTT のハプティック N を鳴らす（3 / 4 / 6。指を置いたまま実行）
   trackpad-runner --send-shortcut         ⇧⌘5 を送る（アクセシビリティ権限が必要）
-  trackpad-runner --probe-buttons [--seconds N]
-                                          トラックパッドの物理ボタンの通知を N 秒（既定 10）表示する（権限不要）
   trackpad-runner --record FILE [--seconds N]
                                           実機の入力を N 秒（既定 10）記録して JSON に保存する
   trackpad-runner --replay FILE... [--report-dir DIR]
@@ -89,11 +87,6 @@ case "--haptic":
     let count = Haptics.playNow(pattern)
     if count < 0 { fail(LiveError.multitouchUnavailable.description) }
     print("\(pattern.name): 鳴らしたデバイス数 \(count)")
-
-case "--probe-buttons":
-    let seconds = option("--seconds", in: args).flatMap(Double.init) ?? 10
-    let count = probeButtons(seconds: seconds)
-    if count < 0 { fail(LiveError.multitouchUnavailable.description) }
 
 case "--send-shortcut":
     Output.screenshotShortcut()

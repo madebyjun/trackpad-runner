@@ -29,14 +29,9 @@ typedef struct {
 
 typedef int (*MTContactCallback)(void *device, MTFinger *fingers, int count, double timestamp, int frame);
 
-// トラックパッドの物理ボタンの状態が変わったときに呼ばれる。state は 1 = 押下, 0 = 解放。
-// device は cmt_start が登録したデバイス（フレームのコールバックの device と同じ値）。
-typedef void (*CMTButtonCallback)(void *device, int state);
-
 // MultitouchSupport を読み込み、全トラックパッドにコールバックを登録して開始する。
-// button は NULL でもよい。
 // 戻り値: 開始したデバイス数。フレームワークが読み込めない場合は -1。
-int cmt_start(MTContactCallback callback, CMTButtonCallback button);
+int cmt_start(MTContactCallback callback);
 
 // デバイス数を返す（開始はしない）。フレームワークが読み込めない場合は -1。
 int cmt_device_count(void);

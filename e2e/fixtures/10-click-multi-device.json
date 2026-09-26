@@ -1,7 +1,8 @@
 {
- "name": "3本置いたトラックパッドでクリック（別のトラックパッドに1本あっても中クリック）",
+ "name": "2台のトラックパッドに新しい接触がある（3本 + 1本）ときは判定せず素通り",
  "failureModes": [
-  24
+  24,
+  27
  ],
  "events": [
   {
@@ -741,8 +742,7 @@
   },
   {
    "t": 0.2,
-   "mouse": "down",
-   "device": 0
+   "mouse": "down"
   },
   {
    "t": 0.21,
@@ -1820,12 +1820,10 @@
  ],
  "expect": {
   "actions": [],
-  "triggers": [
-   "threeFingerClick"
-  ],
+  "triggers": [],
   "mouse": [
-   "convertToMiddle",
-   "convertToMiddle"
+   "passThrough",
+   "passThrough"
   ]
  }
 }

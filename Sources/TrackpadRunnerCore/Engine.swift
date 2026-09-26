@@ -84,10 +84,15 @@ public final class Engine {
         }
     }
 
-    /// device: ボタンが押されたトラックパッド。分からない場合（マウスのクリックなど）は nil で、その場合は常にそのまま通す。
-    public func mouseDown(time: Double, device: Int?) -> MouseDecision {
+    public func mouseDown(time: Double) -> MouseDecision {
         for recognizer in tipTaps.values { recognizer.noteClick() }
-        fingerCountAtLastClick = device.map { freshTouchingCount(device: $0, at: time) } ?? 0
+        // CGEvent にはクリック元のトラックパッドの情報が無い。新しい接触があるトラックパッドが1台だけなら
+        // それをクリック元とみなし、複数台なら判定できないのでそのまま通す（通常のクリックを握りつぶさない）
+        let touched = touchingCount.keys.filter { device in
+            (touchingCount[device] ?? 0) > 0
+                && (lastFrameTime[device].map { time - $0 <= Self.frameFreshness } ?? false)
+        }
+        fingerCountAtLastClick = touched.count == 1 ? touchingCount[touched[0]] ?? 0 : 0
         guard isEnabled else { press = nil; return .passThrough }
 
         switch fingerCountAtLastClick {
@@ -120,17 +125,6 @@ public final class Engine {
             break
         }
         return decision(for: press)
-    }
-
-    /// device の指の本数。最後のフレームが古ければ 0。
-    public func freshTouchingCount(device: Int, at time: Double) -> Int {
-        guard let last = lastFrameTime[device], time - last <= Self.frameFreshness else { return 0 }
-        return touchingCount[device] ?? 0
-    }
-
-    /// 新しいフレームで3本以上触れているトラックパッドがあるか（ボタン押下の通知を待つかどうかの判断用）
-    public func hasFreshMultiFingerContact(at time: Double) -> Bool {
-        touchingCount.keys.contains { freshTouchingCount(device: $0, at: time) >= 3 }
     }
 
     private func decision(for press: Press?) -> MouseDecision {

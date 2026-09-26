@@ -741,8 +741,7 @@
   },
   {
    "t": 0.2,
-   "mouse": "down",
-   "device": 0
+   "mouse": "down"
   },
   {
    "t": 0.21,
