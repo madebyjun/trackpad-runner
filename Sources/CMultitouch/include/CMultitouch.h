@@ -18,7 +18,7 @@ typedef struct {
     int handId;
     MTVector normalized; // 0..1、原点は左下
     float size;
-    int zero1;
+    float pressure; // 押す力（Force Touch のトラックパッドのみ意味がある。BTT もクリックの判定に使っている）
     float angle;
     float majorAxis;
     float minorAxis;
@@ -32,6 +32,9 @@ typedef int (*MTContactCallback)(void *device, MTFinger *fingers, int count, dou
 // MultitouchSupport を読み込み、全トラックパッドにコールバックを登録して開始する。
 // 戻り値: 開始したデバイス数。フレームワークが読み込めない場合は -1。
 int cmt_start(MTContactCallback callback);
+
+// デバイスが Force Touch に対応しているか（MTDeviceSupportsForce）。対応していなければ MTFinger.pressure は使えない。
+int cmt_device_supports_force(void *device);
 
 // デバイス数を返す（開始はしない）。フレームワークが読み込めない場合は -1。
 int cmt_device_count(void);

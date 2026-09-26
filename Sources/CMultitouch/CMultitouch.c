@@ -1,6 +1,7 @@
 #include "CMultitouch.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <dlfcn.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 _Static_assert(sizeof(MTFinger) == 96, "MTFinger layout mismatch");
@@ -8,6 +9,7 @@ _Static_assert(sizeof(MTFinger) == 96, "MTFinger layout mismatch");
 typedef CFArrayRef (*MTDeviceCreateListFn)(void);
 typedef void (*MTRegisterContactFrameCallbackFn)(void *, MTContactCallback);
 typedef void (*MTDeviceStartFn)(void *, int);
+typedef bool (*MTDeviceSupportsForceFn)(void *);
 typedef CFTypeRef (*MTDeviceGetMTActuatorFn)(void *);
 typedef int (*MTActuatorOpenFn)(CFTypeRef);
 typedef CFTypeRef (*MTActuationCreateFromDictionaryFn)(CFDictionaryRef, int);
@@ -52,6 +54,14 @@ int cmt_start(MTContactCallback callback) {
         start(device, 0);
     }
     return (int)n;
+}
+
+int cmt_device_supports_force(void *device) {
+    static MTDeviceSupportsForceFn supports = NULL;
+    void *h = framework();
+    if (!h || !device) return 0;
+    if (!supports) supports = (MTDeviceSupportsForceFn)dlsym(h, "MTDeviceSupportsForce");
+    return supports && supports(device) ? 1 : 0;
 }
 
 #define MAX_ACTUATORS 8

@@ -28,9 +28,20 @@ enum LiveError: Error, CustomStringConvertible {
 
 // MultitouchSupport のコールバックは C 関数ポインタなので、状態はグローバルに置く。
 private var frameHandler: ((Int, [Touch]) -> Void)?
+/// デバイスごとの Force Touch 対応。コールバックはデバイスごとのスレッドから呼ばれるので lock で保護する
+private var forceSupport: [Int: Bool] = [:]
+private let forceSupportLock = NSLock()
 
 private let multitouchCallback: MTContactCallback = { device, fingers, count, _, _ in
     var touches: [Touch] = []
+    // Force Touch 非対応のトラックパッドでは押す力のフィールドに意味が無いので読まない（nil = 分からない）
+    let supportsForce = forceSupportLock.withLock {
+        let key = Int(bitPattern: device)
+        if let known = forceSupport[key] { return known }
+        let supported = cmt_device_supports_force(device) != 0
+        forceSupport[key] = supported
+        return supported
+    }
     if let fingers {
         touches.reserveCapacity(Int(count))
         for i in 0..<Int(count) {
@@ -39,7 +50,8 @@ private let multitouchCallback: MTContactCallback = { device, fingers, count, _,
                 id: Int(f.identifier),
                 x: Double(f.normalized.position.x),
                 y: Double(f.normalized.position.y),
-                state: Int(f.state)
+                state: Int(f.state),
+                pressure: supportsForce ? Double(f.pressure) : nil
             ))
         }
     }
@@ -116,6 +128,16 @@ final class LiveRunner {
     private func makeTap() throws -> EventTap {
         let tap = try EventTap(listenOnly: false) { [weak self] type, event in
             guard let self else { return Unmanaged.passUnretained(event) }
+            // 押す力の強いフレームが左クリックより遅れて届くことがあるので、必要なときだけ少し待つ。
+            // フレームは別スレッドで届くので、待つ間は lock を手放す
+            var waited = 0.0
+            if type == .leftMouseDown {
+                let start = now()
+                while self.lock.withLock({ self.engine.shouldWaitForPressure(at: now()) }), now() - start < Engine.maxPressureWait {
+                    usleep(2_000)
+                }
+                waited = now() - start
+            }
             let decision: MouseDecision = self.lock.withLock {
                 switch type {
                 case .leftMouseDown: self.engine.mouseDown(time: now())
@@ -124,8 +146,8 @@ final class LiveRunner {
                 }
             }
             if type == .leftMouseDown {
-                let fingers = self.lock.withLock { self.engine.fingerCountAtLastClick }
-                log.info("mouseDown fingers=\(fingers) decision=\(decision.rawValue, privacy: .public)")
+                let (fingers, source) = self.lock.withLock { (self.engine.fingerCountAtLastClick, self.engine.sourceAtLastClick) }
+                log.info("mouseDown source=\(source.map { String($0) } ?? "none", privacy: .public) fingers=\(fingers) waited=\(Int(waited * 1000))ms decision=\(decision.rawValue, privacy: .public)")
             }
             switch decision {
             case .passThrough:

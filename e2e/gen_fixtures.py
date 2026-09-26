@@ -6,9 +6,10 @@ import json, os, sys
 OUT = sys.argv[1]
 STEP = 0.01
 
-def finger(id, x, y, on, off, dx=0.0, dy=0.0, device=0, state=5):
+def finger(id, x, y, on, off, dx=0.0, dy=0.0, device=0, state=5, pressure=None):
     # dx,dy: on→off の間に線形に動く量
-    return dict(id=id, x=x, y=y, on=on, off=off, dx=dx, dy=dy, device=device, state=state)
+    # pressure: 押す力。数値か、時刻 t を受け取る関数。省略時は出力しない（押す力が分からないトラックパッド）
+    return dict(id=id, x=x, y=y, on=on, off=off, dx=dx, dy=dy, device=device, state=state, pressure=pressure)
 
 def build(fingers, mouse, end=None):
     end = end or max(f["off"] for f in fingers) + 0.05
@@ -23,7 +24,11 @@ def build(fingers, mouse, end=None):
                 if f["device"] != d or not (f["on"] <= t < f["off"]):
                     continue
                 p = (t - f["on"]) / max(f["off"] - f["on"], 1e-9)
-                touches.append(dict(id=f["id"], x=round(f["x"] + f["dx"] * p, 4), y=round(f["y"] + f["dy"] * p, 4), state=f["state"]))
+                touch = dict(id=f["id"], x=round(f["x"] + f["dx"] * p, 4), y=round(f["y"] + f["dy"] * p, 4), state=f["state"])
+                pr = f["pressure"]
+                if pr is not None:
+                    touch["pressure"] = round(pr(t) if callable(pr) else pr, 1)
+                touches.append(touch)
             e = dict(t=t, touches=touches)
             if d: e["device"] = d
             events.append(e)
@@ -119,6 +124,63 @@ ev = build(anchors() + [finger(3, .3, .4, .3, .4)], [])
 for e in ev:
     if e["t"] >= .35: e["t"] = round(e["t"] - .3, 4)
 case("tiptap-time-rewind", "タップ中にタイムスタンプが巻き戻ったら発火しない（クラッシュもしない）", [20], None, None, [], events=ev)
+
+
+# クリック元の特定（Force Touch、#2）。押す力は実機（内蔵トラックパッド）の値を参考に、置くだけ 20、クリック 120
+REST = 20
+def press(t0, t1):
+    # t0〜t1 の間だけ強く押す
+    return lambda t: 120 if t0 <= t < t1 - 1e-9 else REST
+def ff(id, x, on=0, off=.5, device=0, pressure=REST):
+    return finger(id, x, .5, on, off, device=device, pressure=pressure)
+PRESSED = press(.18, .32)
+
+case("force-1finger-click", "Force Touch: 1本指クリックは素通り", [1, 43],
+     [ff(1, .5, pressure=PRESSED)], click(.2, .3), [], [P, P])
+case("force-3finger-click", "Force Touch: 3本指クリック（強く押すのは1本だけ）→ 中クリック", [2, 53],
+     [ff(1, .4), ff(2, .5, pressure=PRESSED), ff(3, .6)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-4finger-click", "Force Touch: 4本指クリック → ⇧⌘5", [3, 53],
+     [ff(i, .2 + .1 * i, pressure=PRESSED if i == 1 else REST) for i in range(1, 5)], click(.2, .3), ["screenshotShortcut"], [S, S], triggers=["fourFingerClick"])
+case("force-rest3-mouse-click", "Force Touch: 3本置いただけでマウスをクリック → 素通り（30ms 待ってから）", [28, 43, 47],
+     [ff(i, .3 + .1 * i) for i in range(1, 4)], click(.2, .3), [], [P, P], timeline=["wait", "down", "up"])
+case("force-rest4-mouse-click", "Force Touch: 4本置いただけでマウスをクリック → 握りつぶさず素通り", [28, 43, 47],
+     [ff(i, .2 + .1 * i) for i in range(1, 5)], click(.2, .3), [], [P, P])
+case("force-two-devices-3finger", "Force Touch 2台: 片方に1本置いたまま、もう片方で3本指クリック → 中クリック", [44],
+     [ff(1, .4), ff(2, .5, pressure=PRESSED), ff(3, .6), ff(9, .5, device=1)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-two-devices-4finger", "Force Touch 2台: 片方に3本置いたまま、もう片方で4本指クリック → ⇧⌘5", [44, 45],
+     [ff(i, .3 + .1 * i) for i in range(1, 4)] + [ff(10 + i, .2 + .1 * i, device=1, pressure=PRESSED if i == 2 else REST) for i in range(1, 5)],
+     click(.2, .3), ["screenshotShortcut"], [S, S], triggers=["fourFingerClick"])
+case("force-wrong-device", "Force Touch 2台: 片方に4本置いたまま、もう片方を1本指でクリック → 素通り（PR #1 レビューの指摘）", [27, 45],
+     [ff(i, .1 + .1 * i) for i in range(1, 5)] + [ff(10, .5, device=1, pressure=PRESSED)], click(.2, .3), [], [P, P])
+case("force-late-pressure", "Force Touch: 強く押したフレームが左クリックより 15ms 遅れて届いても 3本指クリックになる", [46],
+     [ff(1, .4), ff(2, .5, pressure=press(.215, .32)), ff(3, .6)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"],
+     timeline=["wait", "down", "up", "trigger:threeFingerClick"])
+case("force-too-late-pressure", "Force Touch: 強く押したフレームが 30ms を過ぎても届かなければ素通り", [47],
+     [ff(1, .4), ff(2, .5, pressure=press(.25, .32)), ff(3, .6)], click(.2, .3), [], [P, P])
+case("force-old-press", "Force Touch: 3本置いたまま 0.1 秒前に強く押していても、マウスのクリックは素通り", [49],
+     [ff(1, .4), ff(2, .5, pressure=press(.05, .1)), ff(3, .6)], click(.2, .3), [], [P, P])
+case("force-stale-pressed", "Force Touch: 4本で強く押したフレームのあとコールバックが止まり、あとで通常クリック → 素通り（PR #1 レビューの指摘）", [26, 50], None, None, [], [P, P],
+     events=[dict(t=0.0, touches=[dict(id=i, x=.1 + .1 * i, y=.5, pressure=120 if i == 1 else REST) for i in range(1, 5)]),
+             dict(t=10.0, mouse="down"), dict(t=10.1, mouse="up")])
+case("force-both-pressed", "Force Touch 2台: 両方強く押したら、新しく押された方（3本）で判定", [51],
+     [ff(1, .5, pressure=press(.1, .32)), ff(10, .4, device=1), ff(11, .5, device=1, pressure=press(.19, .32)), ff(12, .6, device=1)],
+     click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-both-pressed-reverse", "Force Touch 2台: 3本で押したあと、もう片方を1本指で押したら、新しく押された方（1本）で判定 → 素通り", [51],
+     [ff(1, .5, pressure=press(.19, .32)), ff(10, .4, device=1), ff(11, .5, device=1, pressure=press(.1, .32)), ff(12, .6, device=1)],
+     click(.2, .3), [], [P, P])
+case("force-mixed-legacy-click", "Force Touch に3本置いたまま、押す力が分からないトラックパッドを1本指でクリック → 素通り", [52],
+     [ff(i, .3 + .1 * i) for i in range(1, 4)] + [finger(9, .5, .5, 0, .5, device=1)], click(.2, .3), [], [P, P])
+case("force-mixed-legacy-3finger", "Force Touch に1本置いたまま、押す力が分からないトラックパッドで3本指クリック → 中クリック", [52, 44],
+     [ff(1, .5)] + [finger(10 + i, .3 + .1 * i, .5, 0, .5, device=1) for i in range(1, 4)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-3finger-drag", "Force Touch: 3本指で押したままドラッグ（押す力が途中で弱まる）→ 最後まで中ボタン", [5, 4],
+     [ff(1, .4), ff(2, .5, pressure=press(.18, .22)), ff(3, .6)], [(.2, "down"), (.3, "dragged"), (.4, "dragged"), (.45, "up")], [], [C, C, C, C], triggers=["threeFingerClick"])
+case("force-rest2-no-wait", "Force Touch: 2本置いたままマウスをクリックしても待たない（通常のクリックを遅らせない）", [48],
+     [ff(1, .4), ff(2, .5)], click(.2, .3), [], [P, P], timeline=["down", "up"])
+case("force-3finger-no-wait", "Force Touch: 強く押したフレームが先に届いていれば待たない", [48, 2],
+     [ff(1, .4), ff(2, .5, pressure=PRESSED), ff(3, .6)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"],
+     timeline=["down", "up", "trigger:threeFingerClick"])
+case("force-tiptap-left", "Force Touch: 押す力付きのフレームでも TipTap左は発火する", [10],
+     [finger(1, .55, .4, 0, 1, pressure=REST), finger(2, .7, .4, 0, 1, pressure=REST), finger(3, .3, .4, .3, .4, pressure=REST)], [], ["middleClick"], triggers=["tipTapLeft"])
 
 os.makedirs(OUT, exist_ok=True)
 for f in os.listdir(OUT):

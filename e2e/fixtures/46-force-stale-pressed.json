@@ -1,0 +1,54 @@
+{
+ "name": "Force Touch: 4本で強く押したフレームのあとコールバックが止まり、あとで通常クリック → 素通り（PR #1 レビューの指摘）",
+ "failureModes": [
+  26,
+  50
+ ],
+ "events": [
+  {
+   "t": 0.0,
+   "touches": [
+    {
+     "id": 1,
+     "x": 0.2,
+     "y": 0.5,
+     "pressure": 120
+    },
+    {
+     "id": 2,
+     "x": 0.30000000000000004,
+     "y": 0.5,
+     "pressure": 20
+    },
+    {
+     "id": 3,
+     "x": 0.4,
+     "y": 0.5,
+     "pressure": 20
+    },
+    {
+     "id": 4,
+     "x": 0.5,
+     "y": 0.5,
+     "pressure": 20
+    }
+   ]
+  },
+  {
+   "t": 10.0,
+   "mouse": "down"
+  },
+  {
+   "t": 10.1,
+   "mouse": "up"
+  }
+ ],
+ "expect": {
+  "actions": [],
+  "triggers": [],
+  "mouse": [
+   "passThrough",
+   "passThrough"
+  ]
+ }
+}
