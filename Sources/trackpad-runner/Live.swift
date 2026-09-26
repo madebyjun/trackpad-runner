@@ -6,13 +6,6 @@ import TrackpadRunnerCore
 
 let log = Logger(subsystem: "com.madebyjun.trackpad-runner", category: "live")
 
-/// ジェスチャーごとのハプティック。値は BTT で設定していた BTTGestureForceFeedbackPattern と同じ。
-let hapticPatterns: [Trigger: Int32] = [
-    .threeFingerClick: 4,
-    .fourFingerClick: 6,
-    .tipTapLeft: 3,
-]
-
 enum LiveError: Error, CustomStringConvertible {
     case accessibilityNotGranted
     case multitouchUnavailable
@@ -73,8 +66,8 @@ final class LiveRunner {
 
         engine.onTrigger = { trigger in
             guard let pattern = hapticPatterns[trigger] else { return }
-            let count = cmt_actuate(pattern)
-            log.info("trigger=\(trigger.rawValue, privacy: .public) haptic=\(pattern) devices=\(count)")
+            Haptics.play(pattern)
+            log.info("trigger=\(trigger.rawValue, privacy: .public) haptic=\(pattern.name, privacy: .public)")
         }
         engine.onAction = { action in
             log.info("action=\(action.rawValue, privacy: .public)")

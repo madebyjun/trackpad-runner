@@ -8,10 +8,10 @@ _Static_assert(sizeof(MTFinger) == 96, "MTFinger layout mismatch");
 typedef CFArrayRef (*MTDeviceCreateListFn)(void);
 typedef void (*MTRegisterContactFrameCallbackFn)(void *, MTContactCallback);
 typedef void (*MTDeviceStartFn)(void *, int);
-typedef int (*MTDeviceGetDeviceIDFn)(void *, uint64_t *);
-typedef CFTypeRef (*MTActuatorCreateFromDeviceIDFn)(uint64_t);
+typedef CFTypeRef (*MTDeviceGetMTActuatorFn)(void *);
 typedef int (*MTActuatorOpenFn)(CFTypeRef);
-typedef int (*MTActuatorActuateFn)(CFTypeRef, int32_t, uint32_t, float, float);
+typedef CFTypeRef (*MTActuationCreateFromDictionaryFn)(CFDictionaryRef, int);
+typedef int (*MTActuationActuateFn)(CFTypeRef, CFTypeRef, int);
 
 static void *framework(void) {
     static void *handle = NULL;
@@ -55,37 +55,50 @@ int cmt_start(MTContactCallback callback) {
 
 #define MAX_ACTUATORS 8
 
-int cmt_actuate(int actuationID) {
+// BTT と同じく、デバイスのアクチュエータを開いて MTActuation を鳴らす。
+static int open_actuators(CFTypeRef *out) {
     static CFTypeRef actuators[MAX_ACTUATORS];
     static int opened = -1;
-    static MTActuatorActuateFn actuate = NULL;
-
-    CFArrayRef list = device_list();
-    if (!list) return -1;
-    void *h = framework();
-
     if (opened < 0) {
-        MTDeviceGetDeviceIDFn getID = (MTDeviceGetDeviceIDFn)dlsym(h, "MTDeviceGetDeviceID");
-        MTActuatorCreateFromDeviceIDFn create = (MTActuatorCreateFromDeviceIDFn)dlsym(h, "MTActuatorCreateFromDeviceID");
+        CFArrayRef list = device_list();
+        void *h = framework();
+        if (!list || !h) return -1;
+        MTDeviceGetMTActuatorFn get = (MTDeviceGetMTActuatorFn)dlsym(h, "MTDeviceGetMTActuator");
         MTActuatorOpenFn open = (MTActuatorOpenFn)dlsym(h, "MTActuatorOpen");
-        actuate = (MTActuatorActuateFn)dlsym(h, "MTActuatorActuate");
-        if (!getID || !create || !open || !actuate) return -1;
+        if (!get || !open) return -1;
         opened = 0;
         CFIndex n = CFArrayGetCount(list);
         for (CFIndex i = 0; i < n && opened < MAX_ACTUATORS; i++) {
-            uint64_t deviceID = 0;
-            if (getID((void *)CFArrayGetValueAtIndex(list, i), &deviceID) != 0) continue;
-            CFTypeRef actuator = create(deviceID);
+            CFTypeRef actuator = get((void *)CFArrayGetValueAtIndex(list, i));
             if (!actuator) continue; // Force Touch 非対応のトラックパッド
-            if (open(actuator) != 0) { CFRelease(actuator); continue; }
+            if (open(actuator) != 0) continue;
+            CFRetain(actuator);
             actuators[opened++] = actuator;
         }
     }
+    for (int i = 0; i < opened; i++) out[i] = actuators[i];
+    return opened;
+}
 
+CFTypeRef cmt_actuation_create(CFDictionaryRef waveform) {
+    void *h = framework();
+    if (!h) return NULL;
+    MTActuationCreateFromDictionaryFn create = (MTActuationCreateFromDictionaryFn)dlsym(h, "MTActuationCreateFromDictionary");
+    return create ? create(waveform, 0) : NULL;
+}
+
+int cmt_actuation_play(CFTypeRef actuation) {
+    void *h = framework();
+    if (!h || !actuation) return -1;
+    MTActuationActuateFn actuate = (MTActuationActuateFn)dlsym(h, "MTActuationActuate");
+    if (!actuate) return -1;
+    CFTypeRef actuators[MAX_ACTUATORS];
+    int n = open_actuators(actuators);
+    if (n < 0) return -1;
     int count = 0;
-    for (int i = 0; i < opened; i++) {
-        // 引数の 0 / 1.0 / 2.0 は HapticKey などで使われている値
-        if (actuate(actuators[i], actuationID, 0, 1.0f, 2.0f) == 0) count++;
+    for (int i = 0; i < n; i++) {
+        // 第3引数の 6 は BTT が渡している値
+        if (actuate(actuation, actuators[i], 6) == 0) count++;
     }
     return count;
 }

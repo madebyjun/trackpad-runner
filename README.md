@@ -4,11 +4,11 @@ BetterTouchTool で実際に使っていた機能だけを抜き出した、最�
 
 | トリガー | 動作 | ハプティック |
 |---|---|---|
-| 3本指でクリック | 中クリック | 4 |
-| 4本指でクリック | ⇧⌘5（スクリーンショット。CleanShot などに割り当てていればそちらが起動する） | 6 |
-| TipTap左（2本指を置いたまま、その左側を1本指でタップ） | 中クリック | 3 |
+| 3本指でクリック | 中クリック | Double Strong |
+| 4本指でクリック | ⇧⌘5（スクリーンショット。CleanShot などに割り当てていればそちらが起動する） | Spring Light |
+| TipTap左（2本指を置いたまま、その左側を1本指でタップ） | 中クリック | Light Then Strong |
 
-ハプティックの値は BTT の設定値（`BTTGestureForceFeedbackPattern`）と同じで、トラックパッドの振動API（`MTActuatorActuate`）に渡す振動パターンのIDです。値は `Sources/trackpad-runner/Live.swift` の `hapticPatterns` で変えられます。どんな感触かは、トラックパッドに指を置いたまま次を実行すると試せます。
+ハプティックは BTT の組み込みパターンを再現しています。波形（`MTActuationCreateFromDictionary` に渡す辞書）とパルス列・間隔は、BTT 6.723 の実装から読み取った値です（`Sources/trackpad-runner/Haptics.swift`）。トラックパッドに指を置いたまま次を実行すると、単体で鳴らせます。
 
 ```bash
 swift run trackpad-runner --haptic 6
