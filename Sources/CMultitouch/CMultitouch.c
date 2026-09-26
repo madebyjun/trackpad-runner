@@ -38,17 +38,46 @@ int cmt_device_count(void) {
     return list ? (int)CFArrayGetCount(list) : -1;
 }
 
-int cmt_start(MTContactCallback callback) {
+// MTRegisterButtonStateCallback のコールバックは (device?, state) を受け取るが、第1引数の意味は保証がない
+// （BTT も使っていない）。デバイスごとに別の関数を登録して、どのトラックパッドかを確実に区別する。
+#define MAX_BUTTON_DEVICES 8
+static CMTButtonCallback button_callback = NULL;
+static void *button_devices[MAX_BUTTON_DEVICES];
+
+#define BUTTON_TRAMPOLINE(i) \
+    static int button_trampoline_##i(void *unused, int state) { \
+        (void)unused; \
+        if (button_callback) button_callback(button_devices[i], state); \
+        return 0; \
+    }
+BUTTON_TRAMPOLINE(0) BUTTON_TRAMPOLINE(1) BUTTON_TRAMPOLINE(2) BUTTON_TRAMPOLINE(3)
+BUTTON_TRAMPOLINE(4) BUTTON_TRAMPOLINE(5) BUTTON_TRAMPOLINE(6) BUTTON_TRAMPOLINE(7)
+
+typedef int (*MTButtonStateCallback)(void *, int);
+static const MTButtonStateCallback button_trampolines[MAX_BUTTON_DEVICES] = {
+    button_trampoline_0, button_trampoline_1, button_trampoline_2, button_trampoline_3,
+    button_trampoline_4, button_trampoline_5, button_trampoline_6, button_trampoline_7,
+};
+
+typedef void (*MTRegisterButtonStateCallbackFn)(void *, MTButtonStateCallback);
+
+int cmt_start(MTContactCallback callback, CMTButtonCallback button) {
     CFArrayRef list = device_list();
     if (!list) return -1;
     void *h = framework();
     MTRegisterContactFrameCallbackFn reg = (MTRegisterContactFrameCallbackFn)dlsym(h, "MTRegisterContactFrameCallback");
+    MTRegisterButtonStateCallbackFn regButton = (MTRegisterButtonStateCallbackFn)dlsym(h, "MTRegisterButtonStateCallback");
     MTDeviceStartFn start = (MTDeviceStartFn)dlsym(h, "MTDeviceStart");
-    if (!reg || !start) return -1;
+    if (!reg || !start || (button && !regButton)) return -1;
+    button_callback = button;
     CFIndex n = CFArrayGetCount(list);
     for (CFIndex i = 0; i < n; i++) {
         void *device = (void *)CFArrayGetValueAtIndex(list, i);
         reg(device, callback);
+        if (button && i < MAX_BUTTON_DEVICES) {
+            button_devices[i] = device;
+            regButton(device, button_trampolines[i]);
+        }
         start(device, 0);
     }
     return (int)n;

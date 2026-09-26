@@ -489,7 +489,8 @@
   },
   {
    "t": 0.2,
-   "mouse": "down"
+   "mouse": "down",
+   "device": 0
   },
   {
    "t": 0.21,

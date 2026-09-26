@@ -655,7 +655,8 @@
   },
   {
    "t": 0.35,
-   "mouse": "down"
+   "mouse": "down",
+   "device": 0
   },
   {
    "t": 0.36,

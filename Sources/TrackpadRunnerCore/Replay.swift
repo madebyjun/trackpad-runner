@@ -4,6 +4,7 @@ import Foundation
 public struct Recording: Codable {
     public struct Event: Codable {
         public var t: Double
+        /// touches があればそのフレームのデバイス。mouse があればボタンが押されたデバイス（省略時はトラックパッド以外のクリック）
         public var device: Int?
         public var touches: [Touch]?
         /// "down" / "dragged" / "up"
@@ -61,10 +62,11 @@ public enum Replay {
         for event in recording.events {
             if let touches = event.touches {
                 engine.handleFrame(device: event.device ?? 0, time: event.t, touches: touches)
+                continue
             }
             switch event.mouse {
             case nil: break
-            case "down": timeline.append("down"); decisions.append(engine.mouseDown())
+            case "down": timeline.append("down"); decisions.append(engine.mouseDown(time: event.t, device: event.device))
             case "dragged": timeline.append("dragged"); decisions.append(engine.mouseDragged())
             case "up": timeline.append("up"); decisions.append(engine.mouseUp())
             case let other?:

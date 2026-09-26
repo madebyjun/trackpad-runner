@@ -27,8 +27,13 @@ def build(fingers, mouse, end=None):
             e = dict(t=t, touches=touches)
             if d: e["device"] = d
             events.append(e)
-    for t, kind in mouse:
-        events.append(dict(t=t, mouse=kind))
+    # mouse: (t, kind) か (t, kind, device)。down の device はボタンが押されたトラックパッド（既定 0、None ならマウスのクリック）
+    for m in mouse:
+        t, kind = m[0], m[1]
+        device = m[2] if len(m) > 2 else 0
+        e = dict(t=t, mouse=kind)
+        if kind == "down" and device is not None: e["device"] = device
+        events.append(e)
     events.sort(key=lambda e: (e["t"], "mouse" in e))
     return events
 
@@ -57,7 +62,7 @@ case("click-3finger-drag", "3本指で押したままドラッグ → dragged �
 case("click-5finger", "5本指クリックは素通り", [6], [finger(i, .1 + .1 * i, .5, 0, .5) for i in range(1, 6)], click(.2, .3), [], [P, P])
 case("click-3finger-one-hovering", "触れていない指（ホバー）は数えない", [7],
      [finger(1, .4, .5, 0, .5), finger(2, .5, .5, 0, .5), finger(3, .6, .5, 0, .5, state=3)], click(.2, .3), [], [P, P])
-case("click-multi-device", "別デバイスの指は合算しない（3本 + 1本 → 3本として中クリック）", [24],
+case("click-multi-device", "3本置いたトラックパッドでクリック（別のトラックパッドに1本あっても中クリック）", [24],
      [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)] + [finger(9, .5, .5, 0, .5, device=1)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
 
 # TipTap左
@@ -83,6 +88,23 @@ case("tiptap-twice", "2回タップすると2回だけ発火する", [19],
      anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .7, .8)], [], ["middleClick", "middleClick"], triggers=["tipTapLeft", "tipTapLeft"])
 case("tiptap-other-device", "固定とタップが別デバイスなら発火しない", [24],
      anchors() + [finger(3, .3, .4, .3, .4, device=1)], [], [])
+
+
+# PR #1 レビューの指摘（入力はレビューの再現用ファイルと同じ）
+FOUR = [dict(id=i, x=.1 + .1 * i, y=.5) for i in range(1, 5)]
+case("review-stale-touch", "4本指フレームが停止した後の通常クリック（ボタンの入力元が不明）", [9, 26], None, None, [], [P, P],
+     events=[dict(t=0.0, device=0, touches=FOUR), dict(t=10.0, mouse="down"), dict(t=10.1, mouse="up")])
+case("review-wrong-device", "片方に4本を置いたまま別のトラックパッドで1本指クリック（ボタンの入力元が不明）", [27, 24], None, None, [], [P, P],
+     events=[dict(t=0.0, device=0, touches=FOUR), dict(t=0.1, device=1, touches=[dict(id=10, x=.5, y=.5)]),
+             dict(t=0.2, mouse="down"), dict(t=0.3, mouse="up")])
+# 同じ状況で、ボタンの入力元が分かっている場合
+case("stale-touch-same-device", "4本指フレームが停止した後、そのトラックパッドでクリックしても素通り", [26], None, None, [], [P, P],
+     events=[dict(t=0.0, device=0, touches=FOUR), dict(t=10.0, mouse="down", device=0), dict(t=10.1, mouse="up")])
+case("wrong-device-known", "片方に4本を置いたまま、1本指のトラックパッドのボタンでクリックしたら素通り", [27, 24],
+     [finger(i, .1 + .1 * i, .5, 0, .5) for i in range(1, 5)] + [finger(10, .5, .5, 0, .5, device=1)],
+     [(.2, "down", 1), (.3, "up")], [], [P, P])
+case("external-mouse-click", "3本置いたままマウスでクリックしても素通り", [28],
+     [finger(i, .3 + .1 * i, .5, 0, .5) for i in range(1, 4)], [(.2, "down", None), (.3, "up")], [], [P, P])
 
 # タイムスタンプの巻き戻り
 ev = build(anchors() + [finger(3, .3, .4, .3, .4)], [])

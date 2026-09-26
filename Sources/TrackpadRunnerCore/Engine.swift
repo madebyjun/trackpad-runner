@@ -57,7 +57,11 @@ public final class Engine {
 
     private enum Press { case middle, shortcut }
 
+    /// これより古いフレームの指の本数はクリックの判定に使わない（コールバックが止まった場合の保険）
+    public static let frameFreshness = 0.25
+
     private var touchingCount: [Int: Int] = [:]
+    private var lastFrameTime: [Int: Double] = [:]
     private var tipTaps: [Int: TipTapRecognizer] = [:]
     /// down 時の判定。up / dragged まで保持し、途中で指の本数が変わっても種類を食い違わせない。
     private var press: Press?
@@ -70,6 +74,7 @@ public final class Engine {
     public func handleFrame(device: Int, time: Double, touches: [Touch]) {
         let touching = touches.filter(\.isTouching)
         touchingCount[device] = touching.count
+        lastFrameTime[device] = time
 
         let recognizer = tipTaps[device] ?? TipTapRecognizer(config: tipTapConfig)
         tipTaps[device] = recognizer
@@ -79,10 +84,10 @@ public final class Engine {
         }
     }
 
-    public func mouseDown() -> MouseDecision {
+    /// device: ボタンが押されたトラックパッド。分からない場合（マウスのクリックなど）は nil で、その場合は常にそのまま通す。
+    public func mouseDown(time: Double, device: Int?) -> MouseDecision {
         for recognizer in tipTaps.values { recognizer.noteClick() }
-        // どのデバイスでクリックされたかは分からないので、最も指が多いデバイスで判定する
-        fingerCountAtLastClick = touchingCount.values.max() ?? 0
+        fingerCountAtLastClick = device.map { freshTouchingCount(device: $0, at: time) } ?? 0
         guard isEnabled else { press = nil; return .passThrough }
 
         switch fingerCountAtLastClick {
@@ -115,6 +120,17 @@ public final class Engine {
             break
         }
         return decision(for: press)
+    }
+
+    /// device の指の本数。最後のフレームが古ければ 0。
+    public func freshTouchingCount(device: Int, at time: Double) -> Int {
+        guard let last = lastFrameTime[device], time - last <= Self.frameFreshness else { return 0 }
+        return touchingCount[device] ?? 0
+    }
+
+    /// 新しいフレームで3本以上触れているトラックパッドがあるか（ボタン押下の通知を待つかどうかの判断用）
+    public func hasFreshMultiFingerContact(at time: Double) -> Bool {
+        touchingCount.keys.contains { freshTouchingCount(device: $0, at: time) >= 3 }
     }
 
     private func decision(for press: Press?) -> MouseDecision {
