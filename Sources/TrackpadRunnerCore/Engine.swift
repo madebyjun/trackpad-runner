@@ -72,10 +72,6 @@ public final class Engine {
     public static let clickPressure = 50.0
     /// 押す力が clickPressure 以上だった最後のフレームがこの時間以内なら、クリック元とみなす
     public static let pressWindow = 0.08
-    /// 押し始め（押す力が clickPressure を超えた時点）からこの時間を過ぎたら、クリック元とみなさない。
-    /// 押し続けているだけ（クリックしない）のトラックパッドが、あとのマウスのクリックのクリック元にならないようにする。
-    /// ゆっくり押し込んだクリックを見逃さないよう、長めにとる
-    public static let maxPressAge = 0.2
     /// 押す力の強いフレームが左クリックより遅れて届く場合に、待つ最長時間
     public static let maxPressureWait = 0.03
 
@@ -85,7 +81,9 @@ public final class Engine {
     private var forceDevices: Set<Int> = []
     /// 押す力が clickPressure 以上だった最後のフレームの時刻
     private var pressedTime: [Int: Double] = [:]
-    /// 押す力が clickPressure を超えた（押され始めた）時刻。下回ったら次に超えたときに測り直す
+    /// 押す力が clickPressure を超えた（押され始めた）時刻。下回ったら次に超えたときに測り直す。
+    /// 複数台が押されているときに新しく押された方を選ぶのと、ログ用。
+    /// 押し始めからの時間では打ち切らない（ゆっくり押し込むクリックを取りこぼさないため。#57）
     private var pressStartTime: [Int: Double] = [:]
     /// 直前のフレームで押す力が clickPressure 以上だったトラックパッド
     private var pressedNow: Set<Int> = []
@@ -191,9 +189,7 @@ public final class Engine {
     private func pressedDevices(at time: Double) -> [Int] {
         forceDevices.filter { device in
             freshTouchingCount(device: device, at: time) > 0
-                && (pressedTime[device].map { time - $0 <= Self.pressWindow } ?? false)
-                && (pressStartTime[device].map { time - $0 <= Self.maxPressAge } ?? false)
-        }
+                && (pressedTime[device].map { time - $0 <= Self.pressWindow } ?? false)        }
     }
 
     /// 新しいフレームで触れている指の本数（古いフレームなら 0）

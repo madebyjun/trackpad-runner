@@ -1,7 +1,7 @@
 {
- "name": "Force Touch: 3本のうち1本を押す力 60 で押し続けたまま（クリックせず）、0.7 秒後にマウスをクリック → 中クリックになる（既知の制限）",
+ "name": "Force Touch: とてもゆっくり押し込んだ3本指クリック（50 を超えてから 0.5 秒後にクリックが確定）→ 中クリック",
  "failureModes": [
-  56,
+  58,
   57
  ],
  "events": [
@@ -150,7 +150,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 20
+     "pressure": 60
     },
     {
      "id": 3,
@@ -176,7 +176,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 20
+     "pressure": 60
     },
     {
      "id": 3,
@@ -202,7 +202,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 20
+     "pressure": 60
     },
     {
      "id": 3,
@@ -228,7 +228,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 20
+     "pressure": 60
     },
     {
      "id": 3,
@@ -254,7 +254,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 20
+     "pressure": 60
     },
     {
      "id": 3,
@@ -1462,6 +1462,10 @@
    ]
   },
   {
+   "t": 0.55,
+   "mouse": "down"
+  },
+  {
    "t": 0.56,
    "touches": [
     {
@@ -1722,6 +1726,10 @@
    ]
   },
   {
+   "t": 0.65,
+   "mouse": "up"
+  },
+  {
    "t": 0.66,
    "touches": [
     {
@@ -1840,7 +1848,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1866,7 +1874,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1892,7 +1900,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1918,7 +1926,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1944,7 +1952,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1970,7 +1978,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -1996,7 +2004,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -2022,7 +2030,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -2048,7 +2056,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -2074,7 +2082,7 @@
      "x": 0.5,
      "y": 0.5,
      "state": 5,
-     "pressure": 60
+     "pressure": 20
     },
     {
      "id": 3,
@@ -2087,554 +2095,26 @@
   },
   {
    "t": 0.8,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.8,
-   "mouse": "down"
+   "touches": []
   },
   {
    "t": 0.81,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
+   "touches": []
   },
   {
    "t": 0.82,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
+   "touches": []
   },
   {
    "t": 0.83,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
+   "touches": []
   },
   {
    "t": 0.84,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
+   "touches": []
   },
   {
    "t": 0.85,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.86,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.87,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.88,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.89,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.9,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.9,
-   "mouse": "up"
-  },
-  {
-   "t": 0.91,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.92,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.93,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.94,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.95,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.96,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.97,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.98,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 0.99,
-   "touches": [
-    {
-     "id": 1,
-     "x": 0.4,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    },
-    {
-     "id": 2,
-     "x": 0.5,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 60
-    },
-    {
-     "id": 3,
-     "x": 0.6,
-     "y": 0.5,
-     "state": 5,
-     "pressure": 20
-    }
-   ]
-  },
-  {
-   "t": 1.0,
-   "touches": []
-  },
-  {
-   "t": 1.01,
-   "touches": []
-  },
-  {
-   "t": 1.02,
-   "touches": []
-  },
-  {
-   "t": 1.03,
-   "touches": []
-  },
-  {
-   "t": 1.04,
-   "touches": []
-  },
-  {
-   "t": 1.05,
    "touches": []
   }
  ],
