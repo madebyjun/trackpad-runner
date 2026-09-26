@@ -63,10 +63,10 @@ case("click-multi-device", "2台のトラックパッドに新しい接触があ
 # TipTap左
 case("tiptap-left", "TipTap左 → 中クリック", [10], anchors() + [finger(3, .3, .4, .3, .4)], [], ["middleClick"], triggers=["tipTapLeft"])
 case("tiptap-right", "右側のタップは発火しない", [11], anchors() + [finger(3, .85, .4, .3, .4)], [], [])
-case("tiptap-long-press", "長押し（0.6秒）は発火しない", [12], anchors() + [finger(3, .3, .4, .2, .8)], [], [])
-case("tiptap-moving-tap", "タップした指が動いた（スワイプ）場合は発火しない", [13], anchors() + [finger(3, .3, .4, .3, .45, dy=.15)], [], [])
-case("tiptap-anchors-scrolling", "2本指スクロール中は発火しない（タップ中に固定側が 0.1 以上動く）", [14],
-     [finger(1, .55, .05, 0, 1, dy=.9), finger(2, .7, .05, 0, 1, dy=.9), finger(3, .3, .4, .3, .5)], [], [])
+case("tiptap-long-press", "長押し（候補になってから 0.25 秒以上）は発火しない", [12], anchors() + [finger(3, .3, .4, .2, .8)], [], [])
+case("tiptap-moving-tap", "タップした指が動いても発火する（BTT はタップした指の移動を見ない）", [13], anchors() + [finger(3, .3, .4, .3, .45, dy=.15)], [], ["middleClick"], triggers=["tipTapLeft"])
+case("tiptap-anchors-scrolling", "タップ中に固定側の左端が 0.1 を超えて動く（2本指スクロール中）と発火しない", [14],
+     [finger(1, .2, .4, 0, 1, dx=.8), finger(2, .35, .4, 0, 1, dx=.8), finger(3, .05, .4, .3, .5)], [], [])
 case("tiptap-with-physical-click", "タップ中に物理クリック → 3本指クリックだけが効き、TipTap は発火しない", [15, 2],
      anchors() + [finger(3, .3, .4, .3, .45)], click(.35, .4), [], [C, C], triggers=["threeFingerClick"])
 case("tiptap-anchors-jitter", "固定側がわずかに動いていても（0.1 未満）発火する", [14], anchors(dy=.2) + [finger(3, .3, .4, .3, .4)], [], ["middleClick"], triggers=["tipTapLeft"])
@@ -77,7 +77,7 @@ case("tiptap-anchor-lifts-first", "固定側が先に離れたら発火しない
      [finger(1, .55, .4, 0, .35), finger(2, .7, .4, 0, 1), finger(3, .3, .4, .3, .4)], [], [])
 case("tiptap-simultaneous-three", "3本同時に置いて左だけ離しても発火しない", [18],
      [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .1, .2)], [], [])
-case("tiptap-anchors-too-young", "固定側を置いた直後（0.1秒未満）のタップは発火しない", [18],
+case("tiptap-anchors-too-young", "2本を置いた直後の短いタップ（0.2 秒経つ前に離す）は発火しない", [18, 32],
      [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .25)], [], [])
 case("tiptap-twice", "2回タップすると2回だけ発火する", [19],
      anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .7, .8)], [], ["middleClick", "middleClick"], triggers=["tipTapLeft", "tipTapLeft"])
@@ -98,6 +98,21 @@ case("other-device-stale", "別のトラックパッドの最後のフレーム�
      events=[dict(t=0.0, device=1, touches=[dict(id=10, x=.5, y=.5)])]
             + [dict(t=round(.5 + .01 * k, 2), touches=THREE) for k in range(31)]
             + [dict(t=.7, mouse="down"), dict(t=.8, mouse="up")])
+
+
+# 実機での報告（2本を置いた直後に3本目を置くと反応しない）と BTT の条件
+case("tiptap-early-tap-held", "2本を置いた直後に3本目を置いても、0.2 秒経つまで残していれば発火する", [32],
+     [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .4)], [], ["middleClick"], triggers=["tipTapLeft"])
+case("tiptap-early-tap-too-long", "早めに置いた3本目も、候補になってから 0.25 秒以上残すと発火しない", [32, 12],
+     [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .6)], [], [])
+case("tiptap-retap-too-soon", "発火の直後（0.2 秒以内）の次のタップは発火しない（BTT は準備を測り直す）", [35, 19],
+     anchors(off=1.2) + [finger(3, .3, .4, .3, .4), finger(4, .3, .4, .45, .55)], [], ["middleClick"], triggers=["tipTapLeft"])
+case("tiptap-click-before-candidate", "3本目を置いてから候補になる前に3本指クリックしても、TipTap は発火しない（二重発火しない）", [36, 15, 2],
+     [finger(1, .55, .4, .1, 1), finger(2, .7, .4, .1, 1), finger(3, .3, .4, .15, .4)], click(.2, .25), [], [C, C], triggers=["threeFingerClick"])
+case("tiptap-too-wide", "3本の x の広がりが 0.6 以上なら発火しない", [33],
+     [finger(1, .5, .4, 0, 1), finger(2, .8, .4, 0, 1), finger(3, .15, .4, .3, .4)], [], [])
+case("tiptap-margin-too-small", "タップが固定側の左端から 0.03 未満しか離れていなければ発火しない", [34],
+     [finger(1, .55, .4, 0, 1), finger(2, .7, .4, 0, 1), finger(3, .53, .45, .3, .4)], [], [])
 
 # タイムスタンプの巻き戻り
 ev = build(anchors() + [finger(3, .3, .4, .3, .4)], [])

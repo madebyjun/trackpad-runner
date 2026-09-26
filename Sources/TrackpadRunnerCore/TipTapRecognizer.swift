@@ -2,104 +2,105 @@ import Foundation
 
 /// TipTap左（2本指固定）: 2本の指を置いたまま、その左側を1本指で短くタップする。
 /// 1デバイスにつき1インスタンス。
+///
+/// 判定の流れは BTT 6.723 の TipTap（ID 132）と同じ。
+/// 1. 2本指になった時刻を「準備」として記録する
+/// 2. 3本指のフレームで、準備から readyDelay を超えていれば候補にする（3本目はそれより前に置いてもよい）
+/// 3. タップした指だけが離れて2本に戻ったとき、候補から maxTapDuration 未満なら発火する
 public final class TipTapRecognizer {
     public struct Config {
-        // 固定側の最短時間・タップの最長時間・固定側の許容移動量は BTT 6.723 の TipTap（2本指固定）と同じ値
+        // 値はすべて BTT 6.723 と同じ
 
-        /// 固定側の指が、タップ開始前から置かれている必要がある最短時間
-        public var minAnchorAge = 0.2
-        /// タップとみなす最長の接触時間
+        /// 2本指になってから、3本目を候補にできるまでの時間
+        public var readyDelay = 0.2
+        /// 候補になってから、タップした指が離れるまでの最長時間
         public var maxTapDuration = 0.25
-        /// タップした指の許容移動量（正規化座標）
-        public var maxTapMove = 0.04
-        /// 固定側の指の許容移動量（2本指スクロール中の誤発火を防ぐ）
-        public var maxAnchorMove = 0.1
-        /// 固定側の最も左の指より、どれだけ左にあればよいか
-        public var leftMargin = 0.02
+        /// 候補の時点と離した時点で、固定側の左端の x がずれてよい量（2本指スクロール中の誤発火を防ぐ）
+        public var maxAnchorShift = 0.1
+        /// タップした指が、固定側の左端よりどれだけ左にあればよいか（BTTTwoFingerTipTapMinSpread の既定値）
+        public var minSpread = 0.03
+        /// 3本の指の x の広がりの上限
+        public var maxWidth = 0.6
+        /// 物理クリックのあと、候補にしない時間（BTT の justClicked。3本指クリックとの二重発火を防ぐ）
+        public var clickCooldown = 0.7
 
         public init() {}
     }
 
-    private struct Contact {
-        var since: Double
-        var x: Double
-        var y: Double
-    }
-
     private struct Candidate {
-        var id: Int
-        var start: Double
-        var x: Double
-        var y: Double
-        var anchors: [Int: Contact]
+        var time: Double
+        var anchorIDs: Set<Int>
+        var anchorLeftX: Double
         var clicked = false
     }
 
     private let config: Config
-    private var contacts: [Int: Contact] = [:]
+    /// 2本指になった時刻。候補にしたら消費し、2本に戻ったときにまた記録する
+    private var readyTime: Double?
+    /// 直近の2本指フレームの指（固定側）
+    private var anchors: [Int: Touch] = [:]
     private var candidate: Candidate?
+    private var lastClickTime = -Double.infinity
     private var lastTime = -Double.infinity
 
     public init(config: Config = .init()) {
         self.config = config
     }
 
-    /// タップ中に物理クリックがあった場合は TipTap として扱わない（3本指クリックとの二重発火防止）。
-    public func noteClick() {
+    /// 物理クリックがあったことを伝える。候補中なら TipTap として扱わず、
+    /// 候補になる前なら clickCooldown の間は候補にしない（3本指クリックとの二重発火防止）。
+    public func noteClick(at time: Double) {
         candidate?.clicked = true
+        lastClickTime = time
     }
 
     /// 触れている指だけを渡す。発火すべきフレームで true を返す。
     public func feed(time: Double, touching: [Touch]) -> Bool {
         // タイムスタンプが巻き戻ったら状態を捨ててやり直す
         if time < lastTime {
-            contacts = [:]
+            readyTime = nil
+            anchors = [:]
             candidate = nil
+            lastClickTime = -.infinity
         }
         lastTime = time
 
-        let current = Dictionary(touching.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        let newIDs = current.keys.filter { contacts[$0] == nil }
+        let ids = Set(touching.map(\.id))
         var fired = false
 
-        if let c = candidate {
-            if !newIDs.isEmpty {
-                // タップ中に別の指が加わった
-                candidate = nil
-            } else if !c.anchors.keys.allSatisfy({ current[$0] != nil }) || anchorsMoved(c, current) {
-                candidate = nil
-            } else if let tap = current[c.id] {
-                if time - c.start > config.maxTapDuration
-                    || hypot(tap.x - c.x, tap.y - c.y) > config.maxTapMove {
-                    candidate = nil
+        switch touching.count {
+        case 2:
+            if let c = candidate {
+                // 固定側が残ったまま、タップした指だけが離れた
+                if ids == c.anchorIDs, let left = touching.map(\.x).min() {
+                    fired = !c.clicked
+                        && time - c.time < config.maxTapDuration
+                        && abs(left - c.anchorLeftX) <= config.maxAnchorShift
                 }
-            } else {
-                // タップした指が離れた
-                fired = !c.clicked && time - c.start <= config.maxTapDuration
                 candidate = nil
             }
-        } else if newIDs.count == 1, let newID = newIDs.first, let tap = current[newID] {
-            let anchors = contacts.filter { current[$0.key] != nil }
-            if anchors.count == 2, current.count == 3,
-               anchors.values.allSatisfy({ time - $0.since >= config.minAnchorAge }),
-               let leftmost = anchors.values.map(\.x).min(),
-               tap.x < leftmost - config.leftMargin {
-                candidate = Candidate(id: newID, start: time, x: tap.x, y: tap.y, anchors: anchors)
-            }
-        }
+            if readyTime == nil { readyTime = time }
+            anchors = Dictionary(touching.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
-        var next: [Int: Contact] = [:]
-        for (id, t) in current {
-            next[id] = Contact(since: contacts[id]?.since ?? time, x: t.x, y: t.y)
+        case 3:
+            guard candidate == nil,
+                  let ready = readyTime, time - ready > config.readyDelay,
+                  time - lastClickTime > config.clickCooldown,
+                  anchors.count == 2, anchors.keys.allSatisfy(ids.contains),
+                  let tap = touching.first(where: { anchors[$0.id] == nil }),
+                  let anchorLeft = anchors.values.map(\.x).min(),
+                  let minX = touching.map(\.x).min(), let maxX = touching.map(\.x).max(),
+                  maxX - minX < config.maxWidth,
+                  tap.x < anchorLeft - config.minSpread
+            else { break }
+            candidate = Candidate(time: time, anchorIDs: Set(anchors.keys), anchorLeftX: anchorLeft)
+            readyTime = nil
+
+        default:
+            candidate = nil
+            readyTime = nil
+            anchors = [:]
         }
-        contacts = next
         return fired
-    }
-
-    private func anchorsMoved(_ c: Candidate, _ current: [Int: Touch]) -> Bool {
-        c.anchors.contains { id, start in
-            guard let now = current[id] else { return true }
-            return hypot(now.x - start.x, now.y - start.y) > config.maxAnchorMove
-        }
     }
 }

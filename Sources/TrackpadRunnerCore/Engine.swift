@@ -85,7 +85,7 @@ public final class Engine {
     }
 
     public func mouseDown(time: Double) -> MouseDecision {
-        for recognizer in tipTaps.values { recognizer.noteClick() }
+        for recognizer in tipTaps.values { recognizer.noteClick(at: time) }
         // CGEvent にはクリック元のトラックパッドの情報が無い。新しい接触があるトラックパッドが1台だけなら
         // それをクリック元とみなし、複数台なら判定できないのでそのまま通す（通常のクリックを握りつぶさない）
         let touched = touchingCount.keys.filter { device in

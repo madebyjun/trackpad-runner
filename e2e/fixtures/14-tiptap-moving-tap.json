@@ -1,5 +1,5 @@
 {
- "name": "タップした指が動いた（スワイプ）場合は発火しない",
+ "name": "タップした指が動いても発火する（BTT はタップした指の移動を見ない）",
  "failureModes": [
   13
  ],
@@ -1820,7 +1820,11 @@
   }
  ],
  "expect": {
-  "actions": [],
-  "triggers": []
+  "actions": [
+   "middleClick"
+  ],
+  "triggers": [
+   "tipTapLeft"
+  ]
  }
 }
