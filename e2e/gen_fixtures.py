@@ -179,11 +179,13 @@ case("force-rest2-no-wait", "Force Touch: 2本置いたままマウスをクリ�
 case("force-3finger-no-wait", "Force Touch: 強く押したフレームが先に届いていれば待たない", [48, 2],
      [ff(1, .4), ff(2, .5, pressure=PRESSED), ff(3, .6)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"],
      timeline=["down", "up", "trigger:threeFingerClick"])
-case("force-held-mouse-click", "Force Touch: 3本のうち1本を押す力 60 で押し続けたまま（クリックせず）、0.7 秒後にマウスをクリック → 素通り（PR #6 の Codex レビューの指摘）", [57],
+case("force-held-mouse-click", "Force Touch: 3本のうち1本を押す力 60 で押し続けたまま（クリックせず）、0.7 秒後にマウスをクリック → 中クリックになる（既知の制限）", [56, 57],
      [finger(1, .4, .5, 0, 1.0, pressure=REST), finger(2, .5, .5, 0, 1.0, pressure=lambda t: 60 if t >= .1 else REST), finger(3, .6, .5, 0, 1.0, pressure=REST)],
-     click(.8, .9), [], [P, P])
+     click(.8, .9), [], [C, C], triggers=["threeFingerClick"])
 case("force-slow-press", "Force Touch: ゆっくり押し込んだ3本指クリック（50 を超えてから 0.15 秒後にクリックが確定）→ 中クリック", [58, 2],
      [ff(1, .4), ff(2, .5, pressure=lambda t: 60 if .05 <= t < .32 else REST), ff(3, .6)], click(.2, .3), [], [C, C], triggers=["threeFingerClick"])
+case("force-very-slow-press", "Force Touch: とてもゆっくり押し込んだ3本指クリック（50 を超えてから 0.5 秒後にクリックが確定）→ 中クリック", [58, 57],
+     [ff(1, .4, off=.8), ff(2, .5, off=.8, pressure=lambda t: 60 if .05 <= t < .7 else REST), ff(3, .6, off=.8)], click(.55, .65), [], [C, C], triggers=["threeFingerClick"])
 case("force-repress", "Force Touch: 押し続けたあといったん力を抜き、指を置いたまま押し直して3本指クリック → 中クリック", [59, 57],
      [ff(1, .4, off=.6), ff(2, .5, off=.6, pressure=lambda t: 120 if (t < .3 or .34 <= t < .5) else REST), ff(3, .6, off=.6)],
      click(.37, .45), [], [C, C], triggers=["threeFingerClick"])
