@@ -1,5 +1,7 @@
 #!/bin/bash
-# build/TrackpadRunner.app を作る（アドホック署名）。既存の .app は上書きする。
+# build/TrackpadRunner.app を作る。既存の .app は上書きする。
+# キーチェーンに自己署名証明書「TrackpadRunner Dev」があればそれで署名し、
+# 作り直してもアクセシビリティ等の権限が外れないようにする。なければアドホック署名。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,5 +24,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
-codesign --force --sign - "$APP"
+IDENTITY="TrackpadRunner Dev"
+if security find-identity -p codesigning | grep -q "\"$IDENTITY\""; then
+  codesign --force --sign "$IDENTITY" "$APP"
+else
+  codesign --force --sign - "$APP"
+fi
 echo "$APP"
