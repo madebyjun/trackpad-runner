@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let runner = LiveRunner()
@@ -6,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let toggleItem = NSMenuItem(title: "有効", action: #selector(toggle), keyEquivalent: "")
     private let permissionItem = NSMenuItem(title: "アクセシビリティ権限がありません（許可すると再開します）", action: nil, keyEquivalent: "")
     private let openSettingsItem = NSMenuItem(title: "システム設定を開く…", action: #selector(openAccessibilitySettings), keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: "ログイン時に起動", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runner.onPermissionChange = { [weak self] _ in self?.updateState() }
@@ -30,6 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(openSettingsItem)
         toggleItem.target = self
         menu.addItem(toggleItem)
+        loginItem.target = self
+        menu.addItem(loginItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = menu
@@ -39,6 +43,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggle() {
         runner.isEnabled.toggle()
+        updateState()
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled {
+                try service.unregister()
+            } else {
+                try service.register()
+            }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "ログイン時の起動を切り替えられませんでした"
+            alert.informativeText = "\(error.localizedDescription)"
+            alert.runModal()
+        }
+        if service.status == .requiresApproval {
+            SMAppService.openSystemSettingsLoginItems()
+        }
         updateState()
     }
 
@@ -54,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         openSettingsItem.isHidden = hasPermission
         toggleItem.isHidden = !hasPermission
         toggleItem.state = runner.isEnabled ? .on : .off
+        loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         statusItem?.button?.image = NSImage(
             systemSymbolName: hasPermission ? "hand.tap" : "exclamationmark.triangle",
             accessibilityDescription: "trackpad-runner"
